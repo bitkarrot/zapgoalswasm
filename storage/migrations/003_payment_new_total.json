@@ -1,0 +1,1 @@
+{"operations":[{"op":"add_field","table":"payment_events","field":"newTotal","type":"integer","default":0}]}

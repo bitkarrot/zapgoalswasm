@@ -1,0 +1,1 @@
+{"operations":[{"op":"create_table","table":"payment_events","fields":[{"name":"id","type":"string"},{"name":"goalId","type":"string"},{"name":"amount","type":"integer"},{"name":"processedAt","type":"string"}]}]}

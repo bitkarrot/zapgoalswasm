@@ -1,0 +1,56 @@
+{
+  "id": "zapgoalswasm",
+  "name": "ZapGoals WASM",
+  "short_description": "Create customizable Lightning funding goals with live progress",
+  "description": "Build branded public fundraising pages with live progress, suggested zap amounts, Bitcoin Connect, BOLT11 invoices, and direct LNURL-pay support in a sandboxed WASM extension.",
+  "description_md": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.1.1/description.md",
+  "repo": "https://github.com/bitkarrot/zapgoalswasm",
+  "version": "0.1.1",
+  "min_lnbits_version": "1.6.0rc3",
+  "tile": "/ext-assets/zapgoalswasm/assets/icon.svg",
+  "tags": ["Crowdfunding", "Lightning", "WASM"],
+  "contributors": [{"name": "bitkarrot", "uri": "https://github.com/bitkarrot", "role": "Creator"}],
+  "images": [{"uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.1.1/screenshots/public-goal.png"}, {"uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.1.1/screenshots/choose-zap.png"}],
+  "extension_type": "wasm",
+  "license": "MIT",
+  "wasm": {
+    "module": "wasm/module.wasm",
+    "wit": "wasm/wit/world.wit",
+    "world": "zapgoals",
+    "exports": [
+      {"name": "create-goal", "visibility": "authenticated"},
+      {"name": "list-goals", "visibility": "authenticated"},
+      {"name": "get-wallets", "visibility": "authenticated"},
+      {"name": "update-goal", "visibility": "authenticated"},
+      {"name": "delete-goal", "visibility": "authenticated"},
+      {"name": "get-public-goal", "visibility": "public"},
+      {"name": "create-invoice", "visibility": "public"},
+      {"name": "lnurl-params", "visibility": "public"},
+      {"name": "lnurl-callback", "visibility": "public"},
+      {"name": "on-invoice-paid", "visibility": "event"}
+    ]
+  },
+  "ui_routes": [
+    {"path": "/zapgoalswasm", "entrypoint": "templates/index.html", "auth": "user"},
+    {"path": "/zapgoalswasm/public/{goalId}", "entrypoint": "templates/public.html", "auth": "public"}
+  ],
+  "api_routes": [
+    {"method": "POST", "path": "/goals", "export": "create-goal", "auth": "user"},
+    {"method": "GET", "path": "/goals", "export": "list-goals", "auth": "user"},
+    {"method": "GET", "path": "/wallets", "export": "get-wallets", "auth": "user"},
+    {"method": "PUT", "path": "/goals/{goalId}", "export": "update-goal", "auth": "user", "ownerContext": {"table": "goals", "idParam": "goalId"}},
+    {"method": "DELETE", "path": "/goals/{goalId}", "export": "delete-goal", "auth": "user", "ownerContext": {"table": "goals", "idParam": "goalId"}},
+    {"method": "GET", "path": "/goals/{goalId}/public", "export": "get-public-goal", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}},
+    {"method": "POST", "path": "/goals/{goalId}/invoice", "export": "create-invoice", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}},
+    {"method": "GET", "path": "/lnurl/{goalId}", "export": "lnurl-params", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}},
+    {"method": "GET", "path": "/lnurl/callback/{goalId}", "export": "lnurl-callback", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}}
+  ],
+  "events": {"onInvoicePaid": "on-invoice-paid"},
+  "permissions": [
+    {"id": "ext.storage.read", "description": "Read owned goal storage"},
+    {"id": "ext.storage.read_public", "description": "Read public goal fields", "policies": [{"table_name": "goals", "public_fields": ["id", "title", "descriptionAbove", "descriptionBelow", "goalAmount", "currentAmount", "targetDate", "suggestedAmounts", "walletMode", "backgroundColor", "textColor", "progressColor", "remainderColor", "fontName", "fontWeight", "nostrPubkey", "lightningAddressUsername", "createdAt", "updatedAt"], "source_id_field": "id"}]},
+    {"id": "ext.storage.write", "description": "Create and update goals"},
+    {"id": "wallet.list", "description": "List wallets owned by the user"},
+    {"id": "wallet.create_invoice_public", "description": "Create public contribution invoices", "policies": [{"table": "goals", "wallet_field": "walletId"}]}
+  ]
+}

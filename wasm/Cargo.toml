@@ -1,0 +1,21 @@
+[package]
+name = "zapgoalswasm"
+version = "0.1.1"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+opt-level = "z"
+strip = true
+
+[package.metadata.component]
+target = { path = "wit/world.wit", world = "zapgoals" }
+
+[dependencies]
+wit-bindgen = "0.41"
+serde = { version = "1", default-features = false, features = ["derive"] }
+serde_json = { version = "1", default-features = false, features = ["alloc"] }
+time = { version = "=0.3.41", features = ["parsing", "formatting"] }

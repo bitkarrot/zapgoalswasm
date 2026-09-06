@@ -1,0 +1,52 @@
+(() => {
+  const API = '/api/v1/ext/zapgoalswasm'
+  const app = Vue.createApp({
+    render: window.ZAPGOALS_PUBLIC_RENDER(),
+    data: () => ({goalId: '', goal: null, loading: true, loadError: '', amount: null, comment: '', amountDialog: false, invoiceDialog: false, creatingInvoice: false, invoice: null, bitcoinConnectPayment: null, paymentState: 'idle', startingAmount: 0, subscriptionId: '', removeBridgeListener: null, authoritativeRetryTimer: null, brandingSheet: null, lastGoalLoad: 0, loadInFlight: null, now: Date.now(), isDark: false}),
+    computed: {
+      actualPercent() { return Number(this.goal?.percent ?? (Number(this.goal?.currentAmount || 0) / Math.max(1, Number(this.goal?.goalAmount || 1)) * 100)) || 0 },
+      cappedPercent() { return Math.min(100, Math.max(0, this.actualPercent)) },
+      percentLabel() { return `${this.actualPercent.toFixed(1)}%` },
+      suggestedAmounts() { try { return JSON.parse(this.goal?.suggestedAmounts || '[21,100,500,1000]').slice(0, 4) } catch (_) { return [21, 100, 500, 1000] } },
+      selectedAmountLabel() { return Number.isInteger(Number(this.amount)) && Number(this.amount) > 0 ? Number(this.amount).toLocaleString() : '—' },
+      paymentButtonLabel() { return this.amount ? `Zap ${Number(this.amount).toLocaleString()} sats` : 'Continue to payment' },
+      targetLabel() { return this.goal?.targetDate ? new Intl.DateTimeFormat(undefined, {dateStyle: 'long', timeStyle: 'short'}).format(new Date(this.goal.targetDate)) : '—' },
+      countdownLabel() { if (!this.goal) return ''; const difference = new Date(this.goal.targetDate).getTime() - this.now; if (difference <= 0) return 'Goal ended'; const days = Math.floor(difference / 86400000), hours = Math.floor(difference % 86400000 / 3600000), minutes = Math.floor(difference % 3600000 / 60000), seconds = Math.floor(difference % 60000 / 1000); return days ? `${days}d ${hours}h remaining` : hours ? `${hours}h ${minutes}m remaining` : `${minutes}m ${seconds}s remaining` },
+      isComplete() { return Number(this.goal?.currentAmount || 0) >= Number(this.goal?.goalAmount || Infinity) },
+      isEnded() { return Boolean(this.goal?.targetDate) && new Date(this.goal.targetDate).getTime() <= this.now },
+      zapButtonLabel() { return this.isEnded ? 'Goal ended' : 'Zap this goal' },
+      amountOptionColor() { return this.isDark ? 'grey-5' : 'grey-8' }
+    },
+    methods: {
+      async api(method, path, body) { const result = await LNbitsBridge.callApi(method, API + path, body); if (result?.error) throw new Error(result.error); return result },
+      initTheme() { this.isDark = matchMedia('(prefers-color-scheme: dark)').matches; this.applyTheme() },
+      applyTheme() { document.body.classList.toggle('body--dark', this.isDark); this.$q.dark.set(this.isDark) },
+      toggleTheme() { this.isDark = !this.isDark; this.applyTheme() },
+      safeColor(value, fallback) { return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback },
+      contrastColor(value) { const hex = this.safeColor(value, '#673AB7').slice(1); const channels = [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16)); return (channels[0] * 299 + channels[1] * 587 + channels[2] * 114) / 1000 >= 145 ? '#111827' : '#FFFFFF' },
+      applyGoalDesign(goal) { if (!goal || typeof CSSStyleSheet !== 'function' || !('adoptedStyleSheets' in document)) return; const allowedFonts = ['sans-serif', 'system-ui, sans-serif', 'Arial, sans-serif', '"Trebuchet MS", sans-serif', 'Verdana, sans-serif', 'Tahoma, sans-serif', 'serif', 'Georgia, serif', '"Times New Roman", serif', 'monospace', '"Courier New", monospace']; const text = this.safeColor(goal.textColor, '#1F2937'); const progress = this.safeColor(goal.progressColor, '#673AB7'); const font = allowedFonts.includes(goal.fontName) ? goal.fontName : 'sans-serif'; const weight = [400, 600, 700, 800].includes(Number(goal.fontWeight)) ? Number(goal.fontWeight) : 400; const sheet = new CSSStyleSheet(); sheet.replaceSync(`.public-card-content{color:${text}!important;font-family:${font}!important;font-weight:${weight}!important}.public-card-content .zap-action{background:${progress}!important;color:${this.contrastColor(progress)}!important}`); const previous = this.brandingSheet; this.brandingSheet = sheet; document.adoptedStyleSheets = [...document.adoptedStyleSheets.filter(item => item !== previous), sheet] },
+      async loadGoal(silent = false, force = false) { const requestedAt = Date.now(); if (!force && silent && requestedAt - this.lastGoalLoad < 3000) return this.goal; if (this.loadInFlight) return this.loadInFlight; if (!silent) this.loading = true; this.lastGoalLoad = requestedAt; this.loadInFlight = this.api('GET', `/goals/${this.goalId}/public`).then(goal => { this.goal = goal; this.applyGoalDesign(goal); this.loadError = ''; return goal }).catch(error => { if (!silent) this.loadError = error.message || 'This goal is unavailable.'; return this.goal }).finally(() => { if (!silent) this.loading = false; this.loadInFlight = null }); return this.loadInFlight },
+      openAmountDialog() { this.amount = null; this.comment = ''; this.amountDialog = true },
+      closeAmountDialog() { this.amountDialog = false },
+      selectAmount(amount) { this.amount = Number(amount) },
+      positiveAmount(value) { return Number.isInteger(Number(value)) && Number(value) >= 1 || 'Enter a whole number of at least 1 sat.' },
+      async createInvoice() { if (this.creatingInvoice || !Number.isInteger(Number(this.amount)) || Number(this.amount) < 1) return; this.creatingInvoice = true; try { this.startingAmount = Number(this.goal?.currentAmount || 0); this.invoice = await this.api('POST', `/goals/${this.goalId}/invoice`, {amount: Number(this.amount), comment: this.comment.trim() || null}); this.amountDialog = false; this.paymentState = 'pending'; await this.watchInvoice(this.invoice.paymentHash); if (this.goal?.walletMode === 'all' && window.ZapGoalsBitcoinConnect?.launchPaymentModal) { try { window.ZapGoalsBitcoinConnect.init({appName: 'ZapGoals', showBalance: false, persistConnection: true}); this.bitcoinConnectPayment = window.ZapGoalsBitcoinConnect.launchPaymentModal({invoice: this.invoice.paymentRequest, paymentMethods: 'all', onPaid: () => this.markPaid('bitcoin-connect'), onCancelled: () => { this.bitcoinConnectPayment = null; this.invoiceDialog = true }}) } catch (_) { this.invoiceDialog = true } } else { this.invoiceDialog = true } } catch (error) { await LNbitsBridge.notify(error.message, 'negative') } finally { this.creatingInvoice = false } },
+      async watchInvoice(paymentHash) { if (!paymentHash) return; await this.stopWatching(); this.subscriptionId = `zap-${paymentHash.slice(0, 12)}`; await LNbitsBridge.subscribePayment(paymentHash, this.subscriptionId) },
+      async stopWatching() { if (!this.subscriptionId) return; const id = this.subscriptionId; this.subscriptionId = ''; try { await LNbitsBridge.unsubscribePayment(id) } catch (_) {} },
+      async onBridgeEvent(message) { if (!['payment.update', 'payment.settled'].includes(message.event) || message.subscriptionId !== this.subscriptionId) return; const payment = message.data || {}; if (message.event === 'payment.settled' || (payment.pending === false && ['success', 'settled', 'paid'].includes(String(payment.status || '')))) await this.markPaid('settled') },
+      applyOptimisticPayment() { if (!this.goal) return; const expected = this.startingAmount + Number(this.amount || 0); if (Number(this.goal.currentAmount || 0) >= expected) return; this.goal = {...this.goal, currentAmount: expected, percent: expected * 100 / Math.max(1, Number(this.goal.goalAmount || 1)), status: expected >= Number(this.goal.goalAmount || Infinity) ? 'complete' : this.goal.status} },
+      async markPaid(source = 'settled') { this.paymentState = 'paid'; this.applyOptimisticPayment(); this.invoiceDialog = true; if (source === 'settled') { if (this.bitcoinConnectPayment?.setPaid) this.bitcoinConnectPayment.setPaid({preimage: ''}); this.bitcoinConnectPayment = null; await this.stopWatching() } this.scheduleAuthoritativeRefresh(source === 'bitcoin-connect' ? 1500 : 750, 0) },
+      scheduleAuthoritativeRefresh(delay, attempt) { clearTimeout(this.authoritativeRetryTimer); this.authoritativeRetryTimer = setTimeout(() => this.refreshAfterPayment(attempt), delay) },
+      async refreshAfterPayment(attempt) { const expected = this.startingAmount + Number(this.amount || 0); try { const goal = await this.api('GET', `/goals/${this.goalId}/public`); this.lastGoalLoad = Date.now(); if (Number(goal.currentAmount || 0) >= expected) { this.goal = goal; this.applyGoalDesign(goal); if (this.bitcoinConnectPayment?.setPaid) this.bitcoinConnectPayment.setPaid({preimage: ''}); this.bitcoinConnectPayment = null; await this.stopWatching(); return } } catch (_) {} if (attempt < 2) this.scheduleAuthoritativeRefresh(2500 * 2 ** attempt, attempt + 1) },
+      async copyInvoice() { if (!this.invoice?.paymentRequest) return; try { await navigator.clipboard.writeText(this.invoice.paymentRequest); await LNbitsBridge.notify('Invoice copied.', 'positive') } catch (_) { await LNbitsBridge.notify('Clipboard access is unavailable. Select and copy the invoice text.', 'warning') } },
+      closeInvoice() { if (!this.invoiceDialog && this.paymentState !== 'paid') { this.stopWatching(); this.invoice = null; this.paymentState = 'idle' } },
+      finishPayment() { this.invoiceDialog = false; this.invoice = null; this.paymentState = 'idle'; this.amount = null; this.comment = '' },
+      formatSats(value) { return Number(value || 0).toLocaleString() }
+    },
+    async mounted() { this.initTheme(); try { const context = await LNbitsBridge.connect(); this.goalId = context?.routeParams?.goalId || ''; this.removeBridgeListener = LNbitsBridge.onEvent(message => this.onBridgeEvent(message)); await this.loadGoal(); setInterval(() => { this.now = Date.now(); if (!document.hidden && this.paymentState !== 'paid') this.loadGoal(true) }, 15000) } catch (error) { this.loadError = error.message; this.loading = false } finally { document.getElementById('q-app')?.classList.remove('vue-pending') } },
+    beforeUnmount() { clearTimeout(this.authoritativeRetryTimer); this.removeBridgeListener?.(); this.stopWatching() }
+  })
+  app.use(Quasar, {config: {notify: {}}})
+  if (window.QrcodeVue?.default) app.component('qrcode-vue', window.QrcodeVue.default)
+  window.ZapGoalsPublicApp = app.mount('#q-app')
+})()

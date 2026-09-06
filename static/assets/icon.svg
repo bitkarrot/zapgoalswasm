@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">ZapGoals WASM</title>
+  <desc id="desc">A lightning bolt crossing a circular fundraising progress meter on a pink background</desc>
+  <defs>
+    <linearGradient id="background" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#f472b6"/>
+      <stop offset="1" stop-color="#db2777"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0" stop-color="#fde047"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="url(#background)"/>
+  <circle cx="128" cy="128" r="78" fill="none" stroke="#ffffff" stroke-opacity=".22" stroke-width="18"/>
+  <path d="M128 50a78 78 0 0 1 72.6 106.4" fill="none" stroke="#2dd4bf" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="128" cy="128" r="50" fill="#201b57" fill-opacity=".88"/>
+  <path d="M142 62 89 139h35l-12 56 56-85h-36z" fill="url(#bolt)" stroke="#fff7c2" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="201" cy="157" r="9" fill="#2dd4bf" stroke="#d5fffa" stroke-width="4"/>
+</svg>

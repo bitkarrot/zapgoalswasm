@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ZapGoals</title>
+  <link rel="stylesheet" href="/ext-assets/zapgoalswasm/_lnbits/quasar.css">
+  <link rel="stylesheet" href="/ext-assets/zapgoalswasm/_lnbits/material-icons.css">
+  <link rel="stylesheet" href="/ext-assets/zapgoalswasm/_lnbits/bundle.min.css">
+  <link rel="stylesheet" href="/ext-assets/zapgoalswasm/css/index.css">
+  <link rel="stylesheet" href="/ext-assets/zapgoalswasm/css/theme.css">
+</head>
+<body>
+<div id="q-app" class="vue-pending">
+  <div class="row q-col-gutter-md page-wrap">
+    <div class="col-12 col-lg-9">
+      <q-card>
+        <q-card-section class="row items-center">
+          <div class="col">
+            <div class="text-h5">ZapGoals</div>
+            <div class="text-body2 text-grey-6">Create and share Lightning fundraising goals.</div>
+          </div>
+          <q-btn flat round dense :icon="isDark ? 'light_mode' : 'dark_mode'" aria-label="Toggle theme" @click="toggleTheme"></q-btn>
+          <q-btn unelevated color="primary" icon="add" label="New goal" @click="openGoalDialog()"></q-btn>
+        </q-card-section>
+        <q-separator></q-separator>
+        <q-card-section v-if="loadError && !loading" class="text-center q-pa-xl">
+          <q-icon name="error_outline" color="negative" size="3rem"></q-icon>
+          <div class="q-my-md">{{ loadError }}</div>
+          <q-btn outline color="primary" label="Retry" @click="load"></q-btn>
+        </q-card-section>
+        <q-card-section v-else-if="!loading && !goals.length" class="text-center q-pa-xl">
+          <q-icon name="flag" color="grey-5" size="3rem"></q-icon>
+          <div class="text-h6 q-mt-md">No goals yet</div>
+          <div class="text-body2 text-grey-6">Create your first goal to get a public fundraising page.</div>
+        </q-card-section>
+        <q-table v-else flat :grid="$q.screen.lt.md" :rows="goals" :columns="columns" row-key="id" :loading="loading" :pagination="{rowsPerPage:10}">
+          <template #body-cell-status="props"><q-td :props="props"><q-badge :color="goalStatus(props.row)==='Active'?'positive':'grey'" :label="goalStatus(props.row)"></q-badge></q-td></template>
+          <template #body-cell-actions="props"><q-td :props="props" class="q-gutter-xs"><q-btn flat round dense icon="content_copy" aria-label="Copy public link" @click="copyPublicUrl(props.row)"><q-tooltip>Copy public link</q-tooltip></q-btn><q-btn flat round dense icon="open_in_new" aria-label="Open public page" @click="openPublic(props.row)"><q-tooltip>Open public page</q-tooltip></q-btn><q-btn flat round dense color="primary" icon="edit" aria-label="Edit goal" @click="openGoalDialog(props.row)"></q-btn><q-btn flat round dense color="negative" icon="delete" aria-label="Delete goal" @click="confirmDelete(props.row)"></q-btn></q-td></template>
+          <template #item="props"><div class="q-pa-xs col-12 col-sm-6"><q-card flat bordered><q-card-section><div class="row items-start no-wrap"><div class="col"><div class="text-h6">{{props.row.title}}</div><div>{{formatSats(props.row.currentAmount)}} / {{formatSats(props.row.goalAmount)}}</div><div class="text-caption text-grey-6">{{formatDate(props.row.targetDate)}}</div></div><q-badge :color="goalStatus(props.row)==='Active'?'positive':'grey'" :label="goalStatus(props.row)"></q-badge></div></q-card-section><q-card-actions align="right"><q-btn flat round icon="content_copy" @click="copyPublicUrl(props.row)"></q-btn><q-btn flat round icon="open_in_new" @click="openPublic(props.row)"></q-btn><q-btn flat round color="primary" icon="edit" @click="openGoalDialog(props.row)"></q-btn><q-btn flat round color="negative" icon="delete" @click="confirmDelete(props.row)"></q-btn></q-card-actions></q-card></div></template>
+        </q-table>
+      </q-card>
+    </div>
+    <div class="col-12 col-lg-3">
+      <q-card><q-card-section><div class="text-h6">About ZapGoals</div><p>Build a shareable goal, track incoming sats live and let supporters pay with any Lightning wallet.</p><q-list bordered separator class="rounded-borders q-mb-md"><q-expansion-item dense icon="link" label="Direct LNURL-pay"><div class="q-pa-md text-body2">Each goal exposes a direct LNURL-pay endpoint for compatible wallets.</div></q-expansion-item><q-expansion-item dense icon="security" label="WASM limitations"><div class="q-pa-md text-body2">Lightning Address routing and NIP-57 receipt signing are not exposed by the current WASM host.</div></q-expansion-item></q-list><div class="text-caption">Created by bitkarrot</div></q-card-section></q-card>
+    </div>
+    <q-dialog v-model="formDialog.show" position="top" @hide="resetDialog">
+      <q-card class="goal-dialog q-pa-md">
+        <q-card-section class="row items-center q-pb-none"><div class="text-h6">{{formDialog.editing?'Edit goal':'New goal'}}</div><q-space></q-space><q-btn flat round dense icon="close" aria-label="Close dialog" @click="closeGoalDialog"></q-btn></q-card-section>
+        <q-card-section><form class="q-gutter-md" @submit.prevent="saveGoal">
+          <div class="row q-col-gutter-md"><div class="col-12 col-sm-7"><q-input filled v-model="formDialog.data.title" label="Title *" maxlength="120" counter :rules="[requiredTitle]"></q-input></div><div class="col-12 col-sm-5"><q-select filled emit-value map-options v-model="formDialog.data.walletId" :options="walletOptions" label="Wallet *" :disable="formDialog.editing" :rules="[required]"></q-select></div></div>
+          <q-input filled type="textarea" autogrow v-model="formDialog.data.descriptionAbove" label="Text above the progress bar" maxlength="2000" counter></q-input>
+          <div class="row q-col-gutter-md"><div class="col-12 col-sm-6"><q-input filled type="number" min="1" step="1" v-model.number="formDialog.data.goalAmount" label="Goal amount *" suffix="sats" :rules="[positiveAmount]"></q-input></div><div class="col-12 col-sm-6"><q-input filled type="datetime-local" v-model="formDialog.data.targetDate" label="Target date *" stack-label :rules="[required]"></q-input></div></div>
+          <div class="suggested-section q-mb-lg"><div class="text-subtitle2">Suggested zap amounts</div><div class="text-caption text-grey-6 q-mb-sm">Configure between one and four unique amounts. Leave unused fields blank.</div><div class="row q-col-gutter-sm"><div v-for="index in 4" :key="index" class="col-6 col-sm-3"><q-input filled type="number" min="1" max="2100000000" step="1" v-model.number="formDialog.data.suggestedAmounts[index-1]" :label="`Amount ${index}`" suffix="sats"></q-input></div></div></div>
+          <q-separator class="q-my-md"></q-separator>
+          <div class="section-heading"><div class="text-subtitle1 text-weight-bold">Payment settings</div><div class="text-caption text-grey-6">Choose how contributors are offered wallet payment options.</div></div>
+          <q-select class="full-width" filled emit-value map-options v-model="formDialog.data.walletMode" :options="modeOptions" label="Wallet payment mode"></q-select>
+          <q-banner rounded class="info-banner"><q-icon name="qr_code" class="q-mr-sm"></q-icon>A standard BOLT11 invoice and QR code are always available. Bitcoin Connect is an additional option.</q-banner>
+          <q-input filled v-model.trim="formDialog.data.nostrPubkey" label="Nostr recipient public key (metadata only)" maxlength="64" hint="NIP-57 signing is unavailable in WASM." :rules="[validNostr]"></q-input>
+          <q-input filled v-model.trim="formDialog.data.lightningAddressUsername" label="Lightning Address username (metadata only)" maxlength="64" hint="The WASM extension cannot own /.well-known/lnurlp." :rules="[validUsername]"></q-input>
+          <q-input filled type="textarea" autogrow v-model="formDialog.data.descriptionBelow" label="Text below the progress bar" maxlength="2000" counter></q-input>
+          <q-separator class="q-my-md"></q-separator>
+          <div class="section-heading"><div class="text-subtitle1 text-weight-bold">Design</div><div class="text-caption text-grey-6">Customize the public goal appearance and preview it below.</div></div>
+          <div class="design-color-grid"><q-input class="design-color-field" filled type="color" v-model="formDialog.data.backgroundColor" label="Background" stack-label></q-input><q-input class="design-color-field" filled type="color" v-model="formDialog.data.textColor" label="Text" stack-label></q-input><q-input class="design-color-field" filled type="color" v-model="formDialog.data.progressColor" label="Progress" stack-label></q-input><q-input class="design-color-field" filled type="color" v-model="formDialog.data.remainderColor" label="Remainder" stack-label></q-input></div>
+          <div class="row q-col-gutter-md"><div class="col-12 col-sm-8"><q-select filled emit-value map-options v-model="formDialog.data.fontName" :options="fontOptions" label="Font family"></q-select></div><div class="col-12 col-sm-4"><q-select filled emit-value map-options v-model="formDialog.data.fontWeight" :options="fontWeightOptions" label="Font weight"></q-select></div></div>
+          <div class="text-subtitle2 q-mt-md">Live preview</div><div class="goal-preview rounded-borders"><svg class="goal-preview-svg" viewBox="0 0 700 180" role="img" aria-label="Goal design preview"><rect class="preview-background" x="0" y="0" width="700" height="180" rx="14" :fill="formDialog.data.backgroundColor"></rect><text class="preview-title" x="24" y="42" :fill="formDialog.data.textColor" :font-family="formDialog.data.fontName" :font-weight="formDialog.data.fontWeight" font-size="24">{{formDialog.data.title||'Your goal title'}}</text><rect x="24" y="76" width="652" height="42" rx="21" :fill="formDialog.data.remainderColor"></rect><rect x="24" y="76" :width="previewBarWidth" height="42" rx="21" :fill="formDialog.data.progressColor"></rect><text class="preview-percent" x="350" y="103" text-anchor="middle" :fill="formDialog.data.textColor" :font-family="formDialog.data.fontName" :font-weight="formDialog.data.fontWeight" font-size="18">{{previewPercent.toFixed(1)}}%</text><text x="24" y="151" :fill="formDialog.data.textColor" :font-family="formDialog.data.fontName" :font-weight="formDialog.data.fontWeight" font-size="17">Current {{Number(formDialog.data.currentAmount||0).toLocaleString()}} sats</text><text x="676" y="151" text-anchor="end" :fill="formDialog.data.textColor" :font-family="formDialog.data.fontName" :font-weight="formDialog.data.fontWeight" font-size="17">Goal {{Number(formDialog.data.goalAmount||0).toLocaleString()}} sats</text></svg></div>
+          <div v-if="formError" class="text-negative" role="alert">{{formError}}</div><div class="row justify-end q-gutter-sm"><q-btn flat label="Cancel" type="button" @click="closeGoalDialog"></q-btn><q-btn unelevated color="primary" type="button" :loading="saving" label="Save goal" @click="saveGoal"></q-btn></div>
+        </form></q-card-section>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="deleteDialog.show"><q-card class="confirm-dialog q-pa-md"><q-card-section><div class="text-h6">Delete goal</div><p>Delete “{{deleteDialog.goal?.title}}”? This cannot be undone.</p></q-card-section><q-card-actions align="right"><q-btn flat label="Cancel" @click="deleteDialog.show=false"></q-btn><q-btn unelevated color="negative" label="Delete" :loading="deleteDialog.loading" @click="deleteGoal"></q-btn></q-card-actions></q-card></q-dialog>
+  </div>
+</div>
+<script src="/ext-assets/zapgoalswasm/_lnbits/vue.global.prod.js"></script>
+<script src="/ext-assets/zapgoalswasm/_lnbits/quasar.umd.prod.js"></script>
+<script src="/ext-assets/zapgoalswasm/js/bridge.js"></script>
+<script src="/ext-assets/zapgoalswasm/js/index-template.js"></script>
+<script src="/ext-assets/zapgoalswasm/js/index.js"></script>
+</body></html>

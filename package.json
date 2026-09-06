@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "scripts": {
+    "build:templates": "node build-templates.js",
+    "build:bitcoin-connect": "esbuild frontend/bitcoin-connect.js --bundle --format=iife --platform=browser --target=es2020 --external:crypto --minify --outfile=static/js/bitcoin-connect.js && node tools/strip-generated.js",
+    "build": "npm run build:templates && npm run build:bitcoin-connect"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@vue/compiler-dom": "3.5.21",
+    "esbuild": "0.25.9"
+  },
+  "dependencies": {
+    "@getalby/bitcoin-connect": "3.12.3"
+  }
+}
