@@ -556,8 +556,11 @@ return function render(_ctx, _cache) {
                     label: "Enable recurring periods"
                   }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
                   (_ctx.formDialog.data.recurring)
-                    ? (_openBlock(), _createElementBlock("div", { key: 0 }, [
-                        _createElementVNode("div", { class: "row q-col-gutter-md" }, [
+                    ? (_openBlock(), _createElementBlock("div", {
+                        key: 0,
+                        class: "q-mt-sm"
+                      }, [
+                        _createElementVNode("div", { class: "row q-col-gutter-md q-mb-md" }, [
                           _createElementVNode("div", { class: "col-12 col-sm-6" }, [
                             _createVNode(_component_q_select, {
                               filled: "",
@@ -587,6 +590,7 @@ return function render(_ctx, _cache) {
                         (_ctx.formDialog.data.recurrenceUnit==='month')
                           ? (_openBlock(), _createBlock(_component_q_input, {
                               key: 0,
+                              class: "q-mb-md",
                               filled: "",
                               type: "number",
                               min: "0",
@@ -600,7 +604,7 @@ return function render(_ctx, _cache) {
                             }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
                           : _createCommentVNode("v-if", true),
                         _createVNode(_component_q_select, {
-                          class: "full-width",
+                          class: "full-width q-mb-md",
                           filled: "",
                           "emit-value": "",
                           "map-options": "",
@@ -609,7 +613,7 @@ return function render(_ctx, _cache) {
                           options: _ctx.walletOptions,
                           label: "Target wallet for sweeps"
                         }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "options"]),
-                        _createElementVNode("div", { class: "row q-col-gutter-md" }, [
+                        _createElementVNode("div", { class: "row q-col-gutter-md q-mb-md" }, [
                           _createElementVNode("div", { class: "col-12 col-sm-6" }, [
                             _createVNode(_component_q_select, {
                               filled: "",
@@ -642,7 +646,15 @@ return function render(_ctx, _cache) {
                               name: "info",
                               class: "q-mr-sm"
                             }),
-                            _createTextVNode("The WASM host does not support automatic scheduling or internal wallet transfers. Use the sweep button to manually close a period and advance to the next.")
+                            _createTextVNode("The WASM host does not support automatic scheduling or internal wallet transfers. Use the sweep button to manually close a period, or set up the "),
+                            _createElementVNode("a", {
+                              href: "https://github.com/bitkarrot/scheduler",
+                              target: "_blank",
+                              rel: "noopener"
+                            }, "scheduler extension"),
+                            _createTextVNode(" to call "),
+                            _createElementVNode("code", null, "POST /api/v1/ext/zapgoalswasm/recurring/sweep-due"),
+                            _createTextVNode(" on a cron schedule.")
                           ]),
                           _: 1 /* STABLE */
                         })

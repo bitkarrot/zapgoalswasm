@@ -295,6 +295,29 @@ pub unsafe fn __post_return_list_periods<T: Guest>(arg0: *mut u8) {
     let l1 = *arg0.add(::core::mem::size_of::<*const u8>()).cast::<usize>();
     _rt::cabi_dealloc(l0, l1, 1);
 }
+#[doc(hidden)]
+#[allow(non_snake_case)]
+pub unsafe fn _export_sweep_due_cabi<T: Guest>(arg0: *mut u8, arg1: usize) -> *mut u8 {
+    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+    let len0 = arg1;
+    let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
+    let result1 = T::sweep_due(_rt::string_lift(bytes0));
+    let ptr2 = (&raw mut _RET_AREA.0).cast::<u8>();
+    let vec3 = (result1.into_bytes()).into_boxed_slice();
+    let ptr3 = vec3.as_ptr().cast::<u8>();
+    let len3 = vec3.len();
+    ::core::mem::forget(vec3);
+    *ptr2.add(::core::mem::size_of::<*const u8>()).cast::<usize>() = len3;
+    *ptr2.add(0).cast::<*mut u8>() = ptr3.cast_mut();
+    ptr2
+}
+#[doc(hidden)]
+#[allow(non_snake_case)]
+pub unsafe fn __post_return_sweep_due<T: Guest>(arg0: *mut u8) {
+    let l0 = *arg0.add(0).cast::<*mut u8>();
+    let l1 = *arg0.add(::core::mem::size_of::<*const u8>()).cast::<usize>();
+    _rt::cabi_dealloc(l0, l1, 1);
+}
 pub trait Guest {
     fn create_goal(payload: _rt::String) -> _rt::String;
     fn list_goals(payload: _rt::String) -> _rt::String;
@@ -308,6 +331,7 @@ pub trait Guest {
     fn on_invoice_paid(payload: _rt::String) -> _rt::String;
     fn sweep_goal(payload: _rt::String) -> _rt::String;
     fn list_periods(payload: _rt::String) -> _rt::String;
+    fn sweep_due(payload: _rt::String) -> _rt::String;
 }
 #[doc(hidden)]
 macro_rules! __export_world_zapgoals_cabi {
@@ -378,7 +402,12 @@ macro_rules! __export_world_zapgoals_cabi {
         _export_list_periods_cabi::<$ty > (arg0, arg1) } } #[unsafe (export_name =
         "cabi_post_list-periods")] unsafe extern "C" fn _post_return_list_periods(arg0 :
         * mut u8,) { unsafe { $($path_to_types)*:: __post_return_list_periods::<$ty >
-        (arg0) } } };
+        (arg0) } } #[unsafe (export_name = "sweep-due")] unsafe extern "C" fn
+        export_sweep_due(arg0 : * mut u8, arg1 : usize,) -> * mut u8 { unsafe {
+        $($path_to_types)*:: _export_sweep_due_cabi::<$ty > (arg0, arg1) } } #[unsafe
+        (export_name = "cabi_post_sweep-due")] unsafe extern "C" fn
+        _post_return_sweep_due(arg0 : * mut u8,) { unsafe { $($path_to_types)*::
+        __post_return_sweep_due::<$ty > (arg0) } } };
     };
 }
 #[doc(hidden)]
@@ -1567,9 +1596,9 @@ pub(crate) use __export_zapgoals_impl as export;
 )]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1541] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x86\x0b\x01A\x02\x01\
-A\x0f\x01B:\x01r\x02\x05tables\x02ids\x04\0\x13storage-get-request\x03\0\0\x01ks\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1555] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x94\x0b\x01A\x02\x01\
+A\x10\x01B:\x01r\x02\x05tables\x02ids\x04\0\x13storage-get-request\x03\0\0\x01ks\
 \x01r\x01\x09data-json\x02\x04\0\x14storage-get-response\x03\0\x03\x01r\x02\x05t\
 ables\x02ids\x04\0\x1astorage-get-public-request\x03\0\x05\x01r\x02\x05tables\x09\
 data-json\x02\x04\0\x13storage-set-request\x03\0\x07\x01r\x01\x02ok\x7f\x04\0\x14\
@@ -1597,9 +1626,10 @@ log-response\x03\0$\x01@\x01\x03req\x01\0\x04\x04\0\x0bstorage-get\x01&\x01@\x01
 \0\x0bget-wallets\x01\x01\x04\0\x0bupdate-goal\x01\x01\x04\0\x0bdelete-goal\x01\x01\
 \x04\0\x0fget-public-goal\x01\x01\x04\0\x0ecreate-invoice\x01\x01\x04\0\x0clnurl\
 -params\x01\x01\x04\0\x0elnurl-callback\x01\x01\x04\0\x0fon-invoice-paid\x01\x01\
-\x04\0\x0asweep-goal\x01\x01\x04\0\x0clist-periods\x01\x01\x04\0\x19lnbits:exten\
-sion/zapgoals\x04\0\x0b\x0e\x01\0\x08zapgoals\x03\0\0\0G\x09producers\x01\x0cpro\
-cessed-by\x02\x0dwit-component\x070.227.1\x10wit-bindgen-rust\x060.41.0";
+\x04\0\x0asweep-goal\x01\x01\x04\0\x0clist-periods\x01\x01\x04\0\x09sweep-due\x01\
+\x01\x04\0\x19lnbits:extension/zapgoals\x04\0\x0b\x0e\x01\0\x08zapgoals\x03\0\0\0\
+G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.227.1\x10wit-bindge\
+n-rust\x060.41.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

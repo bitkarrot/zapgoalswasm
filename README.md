@@ -41,7 +41,7 @@ ZapGoals WASM is a port of the classic LNbits ZapGoals extension for the current
 
 The current LNbits WASM host contract does not expose a safe extension hook for owning `/.well-known/lnurlp` or NIP-57 event cryptography. Therefore the optional classic Lightning Address and NIP-57 fields are retained as presentation metadata, while supported payments use each goal's direct LNURL-pay URL. This extension never claims to verify Nostr signatures or issue NIP-57 receipts.
 
-The WASM host also does not support automatic scheduling or internal wallet transfers. Recurring goal sweeps are triggered manually from the admin panel; the actual movement of sats to a target wallet must be performed externally.
+The WASM host does not support internal wallet transfers, so the actual movement of sats to a target wallet must be performed externally. However, **automated scheduling is supported** via the [Scheduler extension](https://github.com/bitkarrot/scheduler) — see [Automated sweeps](#automated-sweeps) below.
 
 ## Install
 
@@ -83,6 +83,31 @@ Because the WASM host does not support scheduling or internal wallet transfers, 
 - Alternatively, call `POST /api/v1/ext/zapgoalswasm/goals/{goalId}/sweep` with an authenticated session.
 
 The sweep records the completed period in the ledger, advances the period index, computes the next period end date, and resets or rolls over the progress counter according to the configured mode. The actual transfer of sats to the target wallet must be performed separately.
+
+### Automated sweeps
+
+While the WASM host itself does not run a scheduler, the [Scheduler extension](https://github.com/bitkarrot/scheduler) can call the sweep-due endpoint on a cron schedule. This allows all due recurring goals to be swept automatically without manual intervention.
+
+1. Install and enable the Scheduler extension.
+2. Create a new scheduler job with:
+   - **URL**: `http://127.0.0.1:5000/api/v1/ext/zapgoalswasm/recurring/sweep-due`
+   - **Method**: `POST`
+   - **Headers**: `Authorization: Bearer <your-api-key>` (or `X-Api-Key: <your-admin-key>`)
+   - **Schedule**: e.g. `0 * * * *` (hourly) or `0 0 * * *` (daily at midnight)
+3. The endpoint sweeps all recurring goals whose `periodEndDate` has passed, records each completed period, and advances to the next period.
+
+The response returns a summary:
+
+```json
+{
+  "swept": [{"goalId": "zg_...", "periodId": "zg_...", "movedAmount": 0, "rolloverAmount": 0, "newPeriodIndex": 1}],
+  "errors": [],
+  "totalDue": 1,
+  "totalSwept": 1
+}
+```
+
+The actual transfer of sats to each goal's target wallet must still be performed separately — the WASM host cannot initiate internal wallet transfers.
 
 ### Period history
 

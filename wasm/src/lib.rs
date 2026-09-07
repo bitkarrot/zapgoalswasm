@@ -374,5 +374,70 @@ impl Guest for Component {
         let rows: Value = serde_json::from_str(&response.rows_json).unwrap_or_else(|_| json!([]));
         ok(json!({"data": rows, "total": response.total}))
     }
+    fn sweep_due(_payload: String) -> String {
+        // Sweep all recurring goals whose periodEndDate has passed.
+        // Intended to be called by the scheduler extension on a cron schedule.
+        let current_ts: u64 = host::now().timestamp;
+        let response = host::storage_get_paginated(&host::StoragePaginatedRequest {
+            table: "goals".into(),
+            filters_json: Some(json!({"recurring": true}).to_string()),
+            search: None,
+            search_fields_json: None,
+            sort_by: None,
+            descending: false,
+            limit: 200,
+            offset: 0,
+        });
+        let goals: Vec<Value> = serde_json::from_str(&response.rows_json).unwrap_or_default();
+        let mut swept = Vec::new();
+        let mut errors = Vec::new();
+        for goal in goals {
+            let goal_id = goal.get("id").and_then(Value::as_str).unwrap_or("").to_string();
+            let period_end = goal.get("periodEndDate").and_then(Value::as_str).unwrap_or("").to_string();
+            if period_end.is_empty() { continue }
+            // Compare periodEndDate (RFC3339) against current timestamp
+            let end_ts = match time::OffsetDateTime::parse(&period_end, &time::format_description::well_known::Rfc3339) {
+                Ok(dt) => dt.unix_timestamp() as u64,
+                Err(_) => continue,
+            };
+            if current_ts < end_ts { continue }
+            // This goal is due — sweep it
+            let mut g = goal;
+            let current_amount = g.get("currentAmount").and_then(Value::as_u64).unwrap_or(0);
+            let goal_amount = g.get("goalAmount").and_then(Value::as_u64).unwrap_or(0);
+            let sweep_mode = g.get("sweepMode").and_then(Value::as_str).unwrap_or("target_amount");
+            let rollover_mode = g.get("rolloverMode").and_then(Value::as_str).unwrap_or("counts_as_progress");
+            let moved_amount = if sweep_mode == "entire_amount" { current_amount } else { current_amount.min(goal_amount) };
+            let rollover_amount = if sweep_mode == "target_amount" && current_amount > goal_amount { current_amount - goal_amount } else { 0 };
+            let period_index = g.get("periodIndex").and_then(Value::as_u64).unwrap_or(0);
+            let period_start = g.get("periodStartDate").and_then(Value::as_str).unwrap_or("").to_string();
+            let period_id = id();
+            let period = json!({
+                "id": period_id, "goalId": &goal_id, "periodIndex": period_index,
+                "startDate": period_start, "endDate": period_end,
+                "zappedAmount": current_amount, "movedAmount": moved_amount,
+                "rolloverAmount": rollover_amount, "sweepMode": sweep_mode,
+                "completedAt": current_ts.to_string()
+            });
+            if !set("periods", &period) { errors.push(format!("Could not record period for {}", goal_id)); continue }
+            let unit = g.get("recurrenceUnit").and_then(Value::as_str).unwrap_or("month");
+            let interval = g.get("recurrenceInterval").and_then(Value::as_u64).unwrap_or(1);
+            let day_of_month = g.get("recurrenceDayOfMonth").and_then(Value::as_u64).unwrap_or(0);
+            let new_period_end = match next_period_end(&period_end, unit, interval, day_of_month) {
+                Ok(date) => date,
+                Err(e) => { errors.push(format!("Could not compute next period for {}: {}", goal_id, e)); continue }
+            };
+            let new_current = if rollover_mode == "counts_as_progress" { rollover_amount } else { 0 };
+            g["periodIndex"] = json!(period_index + 1);
+            g["periodStartDate"] = json!(period_end);
+            g["periodEndDate"] = json!(new_period_end);
+            g["targetDate"] = json!(new_period_end);
+            g["currentAmount"] = json!(new_current);
+            g["updatedAt"] = json!(current_ts.to_string());
+            if !set("goals", &g) { errors.push(format!("Could not advance goal {}", goal_id)); continue }
+            swept.push(json!({"goalId": goal_id, "periodId": period_id, "movedAmount": moved_amount, "rolloverAmount": rollover_amount, "newPeriodIndex": period_index + 1}));
+        }
+        ok(json!({"swept": swept, "errors": errors, "totalDue": swept.len() + errors.len(), "totalSwept": swept.len()}))
+    }
 }
 export!(Component);
