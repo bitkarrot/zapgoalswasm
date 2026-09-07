@@ -802,6 +802,43 @@ return function render(_ctx, _cache) {
       _: 1 /* STABLE */
     }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "onHide"]),
     _createVNode(_component_q_dialog, {
+      modelValue: _ctx.sweepDialog.show,
+      "onUpdate:modelValue": $event => ((_ctx.sweepDialog.show) = $event)
+    }, {
+      default: _withCtx(() => [
+        _createVNode(_component_q_card, { class: "confirm-dialog q-pa-md" }, {
+          default: _withCtx(() => [
+            _createVNode(_component_q_card_section, null, {
+              default: _withCtx(() => [
+                _createElementVNode("div", { class: "text-h6" }, "Confirm sweep"),
+                _createElementVNode("p", null, "Sweep this goal now? Settled sats will be moved to the target wallet.")
+              ]),
+              _: 1 /* STABLE */
+            }),
+            _createVNode(_component_q_card_actions, { align: "right" }, {
+              default: _withCtx(() => [
+                _createVNode(_component_q_btn, {
+                  flat: "",
+                  label: "Cancel",
+                  onClick: $event => (_ctx.sweepDialog.show=false)
+                }, null, 8 /* PROPS */, ["onClick"]),
+                _createVNode(_component_q_btn, {
+                  unelevated: "",
+                  color: "primary",
+                  label: "Sweep now",
+                  loading: _ctx.sweepDialog.loading,
+                  onClick: _ctx.confirmSweep
+                }, null, 8 /* PROPS */, ["loading", "onClick"])
+              ]),
+              _: 1 /* STABLE */
+            })
+          ]),
+          _: 1 /* STABLE */
+        })
+      ]),
+      _: 1 /* STABLE */
+    }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
+    _createVNode(_component_q_dialog, {
       modelValue: _ctx.deleteDialog.show,
       "onUpdate:modelValue": $event => ((_ctx.deleteDialog.show) = $event)
     }, {
