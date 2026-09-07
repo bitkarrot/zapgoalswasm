@@ -1,11 +1,12 @@
 window.ZAPGOALS_PUBLIC_RENDER=function(){
-const { resolveComponent: _resolveComponent, createVNode: _createVNode, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, toDisplayString: _toDisplayString, withCtx: _withCtx, createBlock: _createBlock, renderList: _renderList, Fragment: _Fragment, withModifiers: _withModifiers } = Vue
+const { resolveComponent: _resolveComponent, createVNode: _createVNode, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, toDisplayString: _toDisplayString, withCtx: _withCtx, createBlock: _createBlock, createTextVNode: _createTextVNode, renderList: _renderList, Fragment: _Fragment, withModifiers: _withModifiers } = Vue
 
 return function render(_ctx, _cache) {
   const _component_q_btn = _resolveComponent("q-btn")
   const _component_q_spinner = _resolveComponent("q-spinner")
   const _component_q_icon = _resolveComponent("q-icon")
   const _component_q_card = _resolveComponent("q-card")
+  const _component_q_badge = _resolveComponent("q-badge")
   const _component_q_card_section = _resolveComponent("q-card-section")
   const _component_q_avatar = _resolveComponent("q-avatar")
   const _component_q_space = _resolveComponent("q-space")
@@ -82,9 +83,30 @@ return function render(_ctx, _cache) {
                   _createVNode(_component_q_card_section, { class: "public-card-content q-pa-lg q-pa-sm-xl" }, {
                     default: _withCtx(() => [
                       _createElementVNode("h1", { class: "goal-title text-center q-mt-none q-mb-lg" }, _toDisplayString(_ctx.goal.title), 1 /* TEXT */),
+                      (_ctx.goal.recurring)
+                        ? (_openBlock(), _createElementBlock("div", {
+                            key: 0,
+                            class: "text-center q-mb-lg"
+                          }, [
+                            _createVNode(_component_q_badge, {
+                              color: "primary",
+                              class: "recurring-badge"
+                            }, {
+                              default: _withCtx(() => [
+                                _createVNode(_component_q_icon, {
+                                  name: "refresh",
+                                  size: "14px",
+                                  class: "q-mr-xs"
+                                }),
+                                _createTextVNode(_toDisplayString(_ctx.recurrenceLabel), 1 /* TEXT */)
+                              ]),
+                              _: 1 /* STABLE */
+                            })
+                          ]))
+                        : _createCommentVNode("v-if", true),
                       (_ctx.goal.descriptionAbove)
                         ? (_openBlock(), _createElementBlock("p", {
-                            key: 0,
+                            key: 1,
                             class: "goal-description q-mb-lg"
                           }, _toDisplayString(_ctx.goal.descriptionAbove), 1 /* TEXT */))
                         : _createCommentVNode("v-if", true),
@@ -120,7 +142,7 @@ return function render(_ctx, _cache) {
                         ])),
                         _createElementVNode("span", { class: "percent-label" }, _toDisplayString(_ctx.percentLabel), 1 /* TEXT */)
                       ], 8 /* PROPS */, ["aria-valuenow", "aria-valuemax"]),
-                      _createElementVNode("div", { class: "row justify-between q-mt-sm text-weight-medium" }, [
+                      _createElementVNode("div", { class: "row justify-between q-mt-sm" }, [
                         _createElementVNode("span", null, "Current " + _toDisplayString(_ctx.formatSats(_ctx.goal.currentAmount)) + " sats", 1 /* TEXT */),
                         _createElementVNode("span", null, "Goal " + _toDisplayString(_ctx.formatSats(_ctx.goal.goalAmount)) + " sats", 1 /* TEXT */)
                       ]),
@@ -131,7 +153,7 @@ return function render(_ctx, _cache) {
                       ]),
                       (_ctx.goal.descriptionBelow)
                         ? (_openBlock(), _createElementBlock("p", {
-                            key: 1,
+                            key: 2,
                             class: "goal-description q-mb-lg"
                           }, _toDisplayString(_ctx.goal.descriptionBelow), 1 /* TEXT */))
                         : _createCommentVNode("v-if", true),
@@ -148,7 +170,7 @@ return function render(_ctx, _cache) {
                       }, null, 8 /* PROPS */, ["label", "disable", "onClick"]),
                       (_ctx.isComplete)
                         ? (_openBlock(), _createElementBlock("div", {
-                            key: 2,
+                            key: 3,
                             class: "paid-summary q-mt-lg",
                             "aria-live": "polite"
                           }, [

@@ -18,7 +18,12 @@ return function render(_ctx, _cache) {
   const _component_q_input = _resolveComponent("q-input")
   const _component_q_select = _resolveComponent("q-select")
   const _component_q_banner = _resolveComponent("q-banner")
+  const _component_q_toggle = _resolveComponent("q-toggle")
   const _component_q_dialog = _resolveComponent("q-dialog")
+  const _component_q_tab = _resolveComponent("q-tab")
+  const _component_q_tabs = _resolveComponent("q-tabs")
+  const _component_q_tab_panel = _resolveComponent("q-tab-panel")
+  const _component_q_tab_panels = _resolveComponent("q-tab-panels")
 
   return (_openBlock(), _createElementBlock("div", { class: "row q-col-gutter-md page-wrap" }, [
     _createElementVNode("div", { class: "col-12 col-lg-9" }, [
@@ -153,6 +158,66 @@ return function render(_ctx, _cache) {
                           flat: "",
                           round: "",
                           dense: "",
+                          icon: "code",
+                          "aria-label": "Embed",
+                          onClick: $event => (_ctx.openEmbedDialog(props.row))
+                        }, {
+                          default: _withCtx(() => [
+                            _createVNode(_component_q_tooltip, null, {
+                              default: _withCtx(() => [
+                                _createTextVNode("Embed")
+                              ]),
+                              _: 1 /* STABLE */
+                            })
+                          ]),
+                          _: 1 /* STABLE */
+                        }, 8 /* PROPS */, ["onClick"]),
+                        (props.row.recurring)
+                          ? (_openBlock(), _createBlock(_component_q_btn, {
+                              key: 0,
+                              flat: "",
+                              round: "",
+                              dense: "",
+                              icon: "sweep",
+                              "aria-label": "Sweep period",
+                              onClick: $event => (_ctx.sweepGoal(props.row))
+                            }, {
+                              default: _withCtx(() => [
+                                _createVNode(_component_q_tooltip, null, {
+                                  default: _withCtx(() => [
+                                    _createTextVNode("Sweep period")
+                                  ]),
+                                  _: 1 /* STABLE */
+                                })
+                              ]),
+                              _: 1 /* STABLE */
+                            }, 8 /* PROPS */, ["onClick"]))
+                          : _createCommentVNode("v-if", true),
+                        (props.row.recurring)
+                          ? (_openBlock(), _createBlock(_component_q_btn, {
+                              key: 1,
+                              flat: "",
+                              round: "",
+                              dense: "",
+                              icon: "history",
+                              "aria-label": "Period history",
+                              onClick: $event => (_ctx.openPeriodsDialog(props.row))
+                            }, {
+                              default: _withCtx(() => [
+                                _createVNode(_component_q_tooltip, null, {
+                                  default: _withCtx(() => [
+                                    _createTextVNode("Period history")
+                                  ]),
+                                  _: 1 /* STABLE */
+                                })
+                              ]),
+                              _: 1 /* STABLE */
+                            }, 8 /* PROPS */, ["onClick"]))
+                          : _createCommentVNode("v-if", true),
+                        _createVNode(_component_q_btn, {
+                          flat: "",
+                          round: "",
+                          dense: "",
                           color: "primary",
                           icon: "edit",
                           "aria-label": "Edit goal",
@@ -208,6 +273,30 @@ return function render(_ctx, _cache) {
                                 icon: "open_in_new",
                                 onClick: $event => (_ctx.openPublic(props.row))
                               }, null, 8 /* PROPS */, ["onClick"]),
+                              _createVNode(_component_q_btn, {
+                                flat: "",
+                                round: "",
+                                icon: "code",
+                                onClick: $event => (_ctx.openEmbedDialog(props.row))
+                              }, null, 8 /* PROPS */, ["onClick"]),
+                              (props.row.recurring)
+                                ? (_openBlock(), _createBlock(_component_q_btn, {
+                                    key: 0,
+                                    flat: "",
+                                    round: "",
+                                    icon: "sweep",
+                                    onClick: $event => (_ctx.sweepGoal(props.row))
+                                  }, null, 8 /* PROPS */, ["onClick"]))
+                                : _createCommentVNode("v-if", true),
+                              (props.row.recurring)
+                                ? (_openBlock(), _createBlock(_component_q_btn, {
+                                    key: 1,
+                                    flat: "",
+                                    round: "",
+                                    icon: "history",
+                                    onClick: $event => (_ctx.openPeriodsDialog(props.row))
+                                  }, null, 8 /* PROPS */, ["onClick"]))
+                                : _createCommentVNode("v-if", true),
                               _createVNode(_component_q_btn, {
                                 flat: "",
                                 round: "",
@@ -458,6 +547,109 @@ return function render(_ctx, _cache) {
                   }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
                   _createVNode(_component_q_separator, { class: "q-my-md" }),
                   _createElementVNode("div", { class: "section-heading" }, [
+                    _createElementVNode("div", { class: "text-subtitle1 text-weight-bold" }, "Recurring goal"),
+                    _createElementVNode("div", { class: "text-caption text-grey-6" }, "Enable recurring periods with sweep and rollover at each period end.")
+                  ]),
+                  _createVNode(_component_q_toggle, {
+                    modelValue: _ctx.formDialog.data.recurring,
+                    "onUpdate:modelValue": $event => ((_ctx.formDialog.data.recurring) = $event),
+                    label: "Enable recurring periods"
+                  }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
+                  (_ctx.formDialog.data.recurring)
+                    ? (_openBlock(), _createElementBlock("div", { key: 0 }, [
+                        _createElementVNode("div", { class: "row q-col-gutter-md" }, [
+                          _createElementVNode("div", { class: "col-12 col-sm-6" }, [
+                            _createVNode(_component_q_select, {
+                              filled: "",
+                              "emit-value": "",
+                              "map-options": "",
+                              modelValue: _ctx.formDialog.data.recurrenceUnit,
+                              "onUpdate:modelValue": $event => ((_ctx.formDialog.data.recurrenceUnit) = $event),
+                              options: _ctx.recurrenceUnitOptions,
+                              label: "Recurrence unit"
+                            }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "options"])
+                          ]),
+                          _createElementVNode("div", { class: "col-12 col-sm-6" }, [
+                            _createVNode(_component_q_input, {
+                              filled: "",
+                              type: "number",
+                              min: "1",
+                              max: "365",
+                              step: "1",
+                              modelValue: _ctx.formDialog.data.recurrenceInterval,
+                              "onUpdate:modelValue": $event => ((_ctx.formDialog.data.recurrenceInterval) = $event),
+                              modelModifiers: { number: true },
+                              label: "Interval",
+                              suffix: "units"
+                            }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"])
+                          ])
+                        ]),
+                        (_ctx.formDialog.data.recurrenceUnit==='month')
+                          ? (_openBlock(), _createBlock(_component_q_input, {
+                              key: 0,
+                              filled: "",
+                              type: "number",
+                              min: "0",
+                              max: "31",
+                              step: "1",
+                              modelValue: _ctx.formDialog.data.recurrenceDayOfMonth,
+                              "onUpdate:modelValue": $event => ((_ctx.formDialog.data.recurrenceDayOfMonth) = $event),
+                              modelModifiers: { number: true },
+                              label: "Day of month (0 = same day)",
+                              hint: "Only valid for monthly recurrence"
+                            }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
+                          : _createCommentVNode("v-if", true),
+                        _createVNode(_component_q_select, {
+                          class: "full-width",
+                          filled: "",
+                          "emit-value": "",
+                          "map-options": "",
+                          modelValue: _ctx.formDialog.data.targetWalletId,
+                          "onUpdate:modelValue": $event => ((_ctx.formDialog.data.targetWalletId) = $event),
+                          options: _ctx.walletOptions,
+                          label: "Target wallet for sweeps"
+                        }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "options"]),
+                        _createElementVNode("div", { class: "row q-col-gutter-md" }, [
+                          _createElementVNode("div", { class: "col-12 col-sm-6" }, [
+                            _createVNode(_component_q_select, {
+                              filled: "",
+                              "emit-value": "",
+                              "map-options": "",
+                              modelValue: _ctx.formDialog.data.sweepMode,
+                              "onUpdate:modelValue": $event => ((_ctx.formDialog.data.sweepMode) = $event),
+                              options: _ctx.sweepModeOptions,
+                              label: "Sweep mode"
+                            }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "options"])
+                          ]),
+                          _createElementVNode("div", { class: "col-12 col-sm-6" }, [
+                            _createVNode(_component_q_select, {
+                              filled: "",
+                              "emit-value": "",
+                              "map-options": "",
+                              modelValue: _ctx.formDialog.data.rolloverMode,
+                              "onUpdate:modelValue": $event => ((_ctx.formDialog.data.rolloverMode) = $event),
+                              options: _ctx.rolloverModeOptions,
+                              label: "Rollover mode"
+                            }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "options"])
+                          ])
+                        ]),
+                        _createVNode(_component_q_banner, {
+                          rounded: "",
+                          class: "info-banner"
+                        }, {
+                          default: _withCtx(() => [
+                            _createVNode(_component_q_icon, {
+                              name: "info",
+                              class: "q-mr-sm"
+                            }),
+                            _createTextVNode("The WASM host does not support automatic scheduling or internal wallet transfers. Use the sweep button to manually close a period and advance to the next.")
+                          ]),
+                          _: 1 /* STABLE */
+                        })
+                      ]))
+                    : _createCommentVNode("v-if", true),
+                  _createVNode(_component_q_separator, { class: "q-my-md" }),
+                  _createElementVNode("div", { class: "section-heading" }, [
                     _createElementVNode("div", { class: "text-subtitle1 text-weight-bold" }, "Design"),
                     _createElementVNode("div", { class: "text-caption text-grey-6" }, "Customize the public goal appearance and preview it below.")
                   ]),
@@ -596,7 +788,7 @@ return function render(_ctx, _cache) {
                   ]),
                   (_ctx.formError)
                     ? (_openBlock(), _createElementBlock("div", {
-                        key: 0,
+                        key: 1,
                         class: "text-negative",
                         role: "alert"
                       }, _toDisplayString(_ctx.formError), 1 /* TEXT */))
@@ -655,6 +847,150 @@ return function render(_ctx, _cache) {
                   loading: _ctx.deleteDialog.loading,
                   onClick: _ctx.deleteGoal
                 }, null, 8 /* PROPS */, ["loading", "onClick"])
+              ]),
+              _: 1 /* STABLE */
+            })
+          ]),
+          _: 1 /* STABLE */
+        })
+      ]),
+      _: 1 /* STABLE */
+    }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
+    _createVNode(_component_q_dialog, {
+      modelValue: _ctx.embedDialog.show,
+      "onUpdate:modelValue": $event => ((_ctx.embedDialog.show) = $event)
+    }, {
+      default: _withCtx(() => [
+        _createVNode(_component_q_card, { class: "embed-dialog q-pa-md" }, {
+          default: _withCtx(() => [
+            _createVNode(_component_q_card_section, null, {
+              default: _withCtx(() => [
+                _createElementVNode("div", { class: "text-h6" }, "Embed goal"),
+                _createElementVNode("p", { class: "text-body2 text-grey-6" }, "Copy one of these snippets to embed this goal on any website."),
+                _createVNode(_component_q_tabs, {
+                  modelValue: _ctx.embedDialog.tab,
+                  "onUpdate:modelValue": $event => ((_ctx.embedDialog.tab) = $event),
+                  dense: "",
+                  align: "left",
+                  "active-color": "primary",
+                  "indicator-color": "primary",
+                  class: "q-mt-sm"
+                }, {
+                  default: _withCtx(() => [
+                    _createVNode(_component_q_tab, {
+                      name: "iframe",
+                      label: "Iframe"
+                    }),
+                    _createVNode(_component_q_tab, {
+                      name: "script",
+                      label: "Script"
+                    })
+                  ]),
+                  _: 1 /* STABLE */
+                }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
+                _createVNode(_component_q_separator),
+                _createVNode(_component_q_tab_panels, {
+                  modelValue: _ctx.embedDialog.tab,
+                  "onUpdate:modelValue": $event => ((_ctx.embedDialog.tab) = $event),
+                  animated: ""
+                }, {
+                  default: _withCtx(() => [
+                    _createVNode(_component_q_tab_panel, { name: "iframe" }, {
+                      default: _withCtx(() => [
+                        _createElementVNode("div", { class: "text-caption text-grey-6 q-mb-sm" }, "Stronger isolation. Bitcoin Connect may be limited by third-party storage restrictions."),
+                        _createVNode(_component_q_input, {
+                          outlined: "",
+                          readonly: "",
+                          type: "textarea",
+                          autogrow: "",
+                          "model-value": _ctx.embedIframeSnippet,
+                          label: "Iframe snippet"
+                        }, null, 8 /* PROPS */, ["model-value"]),
+                        _createVNode(_component_q_btn, {
+                          flat: "",
+                          color: "primary",
+                          label: "Copy iframe snippet",
+                          onClick: $event => (_ctx.copyEmbedSnippet(_ctx.embedIframeSnippet))
+                        }, null, 8 /* PROPS */, ["onClick"])
+                      ]),
+                      _: 1 /* STABLE */
+                    }),
+                    _createVNode(_component_q_tab_panel, { name: "script" }, {
+                      default: _withCtx(() => [
+                        _createElementVNode("div", { class: "text-caption text-grey-6 q-mb-sm" }, "Runs in the host page context. Better Bitcoin Connect compatibility but higher trust."),
+                        _createVNode(_component_q_input, {
+                          outlined: "",
+                          readonly: "",
+                          type: "textarea",
+                          autogrow: "",
+                          "model-value": _ctx.embedScriptSnippet,
+                          label: "Script snippet"
+                        }, null, 8 /* PROPS */, ["model-value"]),
+                        _createVNode(_component_q_btn, {
+                          flat: "",
+                          color: "primary",
+                          label: "Copy script snippet",
+                          onClick: $event => (_ctx.copyEmbedSnippet(_ctx.embedScriptSnippet))
+                        }, null, 8 /* PROPS */, ["onClick"])
+                      ]),
+                      _: 1 /* STABLE */
+                    })
+                  ]),
+                  _: 1 /* STABLE */
+                }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"])
+              ]),
+              _: 1 /* STABLE */
+            }),
+            _createVNode(_component_q_card_actions, { align: "right" }, {
+              default: _withCtx(() => [
+                _createVNode(_component_q_btn, {
+                  flat: "",
+                  label: "Close",
+                  onClick: $event => (_ctx.embedDialog.show=false)
+                }, null, 8 /* PROPS */, ["onClick"])
+              ]),
+              _: 1 /* STABLE */
+            })
+          ]),
+          _: 1 /* STABLE */
+        })
+      ]),
+      _: 1 /* STABLE */
+    }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
+    _createVNode(_component_q_dialog, {
+      modelValue: _ctx.periodsDialog.show,
+      "onUpdate:modelValue": $event => ((_ctx.periodsDialog.show) = $event)
+    }, {
+      default: _withCtx(() => [
+        _createVNode(_component_q_card, { class: "periods-dialog q-pa-md" }, {
+          default: _withCtx(() => [
+            _createVNode(_component_q_card_section, null, {
+              default: _withCtx(() => [
+                _createElementVNode("div", { class: "text-h6" }, "Period history — " + _toDisplayString(_ctx.periodsDialog.goal?.title), 1 /* TEXT */),
+                (_ctx.periodsDialog.periods.length)
+                  ? (_openBlock(), _createBlock(_component_q_table, {
+                      key: 0,
+                      flat: "",
+                      dense: "",
+                      rows: _ctx.periodsDialog.periods,
+                      columns: _ctx.periodColumns,
+                      "row-key": "id",
+                      pagination: {rowsPerPage:10}
+                    }, null, 8 /* PROPS */, ["rows", "columns"]))
+                  : (_openBlock(), _createElementBlock("div", {
+                      key: 1,
+                      class: "text-body2 text-grey-6 q-pa-md"
+                    }, "No periods recorded yet. Use the sweep button to close the current period."))
+              ]),
+              _: 1 /* STABLE */
+            }),
+            _createVNode(_component_q_card_actions, { align: "right" }, {
+              default: _withCtx(() => [
+                _createVNode(_component_q_btn, {
+                  flat: "",
+                  label: "Close",
+                  onClick: $event => (_ctx.periodsDialog.show=false)
+                }, null, 8 /* PROPS */, ["onClick"])
               ]),
               _: 1 /* STABLE */
             })

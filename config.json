@@ -27,12 +27,15 @@
       {"name": "create-invoice", "visibility": "public"},
       {"name": "lnurl-params", "visibility": "public"},
       {"name": "lnurl-callback", "visibility": "public"},
-      {"name": "on-invoice-paid", "visibility": "event"}
+      {"name": "on-invoice-paid", "visibility": "event"},
+      {"name": "sweep-goal", "visibility": "authenticated"},
+      {"name": "list-periods", "visibility": "authenticated"}
     ]
   },
   "ui_routes": [
     {"path": "/zapgoalswasm", "entrypoint": "templates/index.html", "auth": "user"},
-    {"path": "/zapgoalswasm/public/{goalId}", "entrypoint": "templates/public.html", "auth": "public"}
+    {"path": "/zapgoalswasm/public/{goalId}", "entrypoint": "templates/public.html", "auth": "public"},
+    {"path": "/zapgoalswasm/public/{goalId}/embed", "entrypoint": "templates/embed.html", "auth": "public"}
   ],
   "api_routes": [
     {"method": "POST", "path": "/goals", "export": "create-goal", "auth": "user"},
@@ -43,12 +46,14 @@
     {"method": "GET", "path": "/goals/{goalId}/public", "export": "get-public-goal", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}},
     {"method": "POST", "path": "/goals/{goalId}/invoice", "export": "create-invoice", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}},
     {"method": "GET", "path": "/lnurl/{goalId}", "export": "lnurl-params", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}},
-    {"method": "GET", "path": "/lnurl/callback/{goalId}", "export": "lnurl-callback", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}}
+    {"method": "GET", "path": "/lnurl/callback/{goalId}", "export": "lnurl-callback", "auth": "public", "ownerContext": {"table": "goals", "idParam": "goalId"}},
+    {"method": "POST", "path": "/goals/{goalId}/sweep", "export": "sweep-goal", "auth": "user", "ownerContext": {"table": "goals", "idParam": "goalId"}},
+    {"method": "GET", "path": "/goals/{goalId}/periods", "export": "list-periods", "auth": "user", "ownerContext": {"table": "goals", "idParam": "goalId"}}
   ],
   "events": {"onInvoicePaid": "on-invoice-paid"},
   "permissions": [
     {"id": "ext.storage.read", "description": "Read owned goal storage"},
-    {"id": "ext.storage.read_public", "description": "Read public goal fields", "policies": [{"table_name": "goals", "public_fields": ["id", "title", "descriptionAbove", "descriptionBelow", "goalAmount", "currentAmount", "targetDate", "suggestedAmounts", "walletMode", "backgroundColor", "textColor", "progressColor", "remainderColor", "fontName", "fontWeight", "nostrPubkey", "lightningAddressUsername", "createdAt", "updatedAt"], "source_id_field": "id"}]},
+    {"id": "ext.storage.read_public", "description": "Read public goal fields", "policies": [{"table_name": "goals", "public_fields": ["id", "title", "descriptionAbove", "descriptionBelow", "goalAmount", "currentAmount", "targetDate", "suggestedAmounts", "walletMode", "backgroundColor", "textColor", "progressColor", "remainderColor", "fontName", "fontWeight", "nostrPubkey", "lightningAddressUsername", "createdAt", "updatedAt", "recurring", "recurrenceUnit", "recurrenceInterval", "periodIndex", "periodEndDate"], "source_id_field": "id"}]},
     {"id": "ext.storage.write", "description": "Create and update goals"},
     {"id": "wallet.list", "description": "List wallets owned by the user"},
     {"id": "wallet.create_invoice_public", "description": "Create public contribution invoices", "policies": [{"table": "goals", "wallet_field": "walletId"}]}
