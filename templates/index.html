@@ -42,7 +42,7 @@
       </q-card>
     </div>
     <div class="col-12 col-lg-3">
-      <q-card><q-card-section><div class="text-h6">About ZapGoals</div><p>Build a shareable goal, track incoming sats live and let supporters pay with any Lightning wallet.</p><q-list bordered separator class="rounded-borders q-mb-md"><q-expansion-item dense icon="link" label="Direct LNURL-pay"><div class="q-pa-md text-body2">Each goal exposes a direct LNURL-pay endpoint for compatible wallets.</div></q-expansion-item><q-expansion-item dense icon="security" label="WASM limitations"><div class="q-pa-md text-body2">Lightning Address routing and NIP-57 receipt signing are not exposed by the current WASM host.</div></q-expansion-item></q-list><div class="text-caption">Created by bitkarrot</div></q-card-section></q-card>
+      <q-card><q-card-section><div class="text-h6">About ZapGoals</div><p>Build a shareable goal, track incoming sats live and let supporters pay with any Lightning wallet.</p><q-list bordered separator class="rounded-borders q-mb-md"><q-expansion-item dense icon="link" label="Direct LNURL-pay"><div class="q-pa-md text-body2">Each goal exposes a direct LNURL-pay endpoint for compatible wallets.</div></q-expansion-item></q-list><div class="text-caption">Created by bitkarrot</div></q-card-section></q-card>
     </div>
     <q-dialog v-model="formDialog.show" position="top" @hide="resetDialog">
       <q-card class="goal-dialog q-pa-md">
@@ -56,8 +56,6 @@
           <div class="section-heading"><div class="text-subtitle1 text-weight-bold">Payment settings</div><div class="text-caption text-grey-6">Choose how contributors are offered wallet payment options.</div></div>
           <q-select class="full-width" filled emit-value map-options v-model="formDialog.data.walletMode" :options="modeOptions" label="Wallet payment mode"></q-select>
           <q-banner rounded class="info-banner"><q-icon name="qr_code" class="q-mr-sm"></q-icon>A standard BOLT11 invoice and QR code are always available. Bitcoin Connect is an additional option.</q-banner>
-          <q-input filled v-model.trim="formDialog.data.nostrPubkey" label="Nostr recipient public key (metadata only)" maxlength="64" hint="NIP-57 signing is unavailable in WASM." :rules="[validNostr]"></q-input>
-          <q-input filled v-model.trim="formDialog.data.lightningAddressUsername" label="Lightning Address username (metadata only)" maxlength="64" hint="The WASM extension cannot own /.well-known/lnurlp." :rules="[validUsername]"></q-input>
           <q-input filled type="textarea" autogrow v-model="formDialog.data.descriptionBelow" label="Text below the progress bar" maxlength="2000" counter></q-input>
           <q-separator class="q-my-md"></q-separator>
           <div class="section-heading"><div class="text-subtitle1 text-weight-bold">Recurring goal</div><div class="text-caption text-grey-6">Enable recurring periods with sweep and rollover at each period end.</div></div>

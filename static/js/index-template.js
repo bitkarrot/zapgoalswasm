@@ -347,16 +347,6 @@ return function render(_ctx, _cache) {
                       _createElementVNode("div", { class: "q-pa-md text-body2" }, "Each goal exposes a direct LNURL-pay endpoint for compatible wallets.")
                     ]),
                     _: 1 /* STABLE */
-                  }),
-                  _createVNode(_component_q_expansion_item, {
-                    dense: "",
-                    icon: "security",
-                    label: "WASM limitations"
-                  }, {
-                    default: _withCtx(() => [
-                      _createElementVNode("div", { class: "q-pa-md text-body2" }, "Lightning Address routing and NIP-57 receipt signing are not exposed by the current WASM host.")
-                    ]),
-                    _: 1 /* STABLE */
                   })
                 ]),
                 _: 1 /* STABLE */
@@ -515,26 +505,6 @@ return function render(_ctx, _cache) {
                     ]),
                     _: 1 /* STABLE */
                   }),
-                  _createVNode(_component_q_input, {
-                    filled: "",
-                    modelValue: _ctx.formDialog.data.nostrPubkey,
-                    "onUpdate:modelValue": $event => ((_ctx.formDialog.data.nostrPubkey) = $event),
-                    modelModifiers: { trim: true },
-                    label: "Nostr recipient public key (metadata only)",
-                    maxlength: "64",
-                    hint: "NIP-57 signing is unavailable in WASM.",
-                    rules: [_ctx.validNostr]
-                  }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "rules"]),
-                  _createVNode(_component_q_input, {
-                    filled: "",
-                    modelValue: _ctx.formDialog.data.lightningAddressUsername,
-                    "onUpdate:modelValue": $event => ((_ctx.formDialog.data.lightningAddressUsername) = $event),
-                    modelModifiers: { trim: true },
-                    label: "Lightning Address username (metadata only)",
-                    maxlength: "64",
-                    hint: "The WASM extension cannot own /.well-known/lnurlp.",
-                    rules: [_ctx.validUsername]
-                  }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "rules"]),
                   _createVNode(_component_q_input, {
                     filled: "",
                     type: "textarea",

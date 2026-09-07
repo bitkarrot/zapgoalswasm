@@ -38,7 +38,7 @@ ZapGoals WASM is a port of the classic LNbits ZapGoals extension for the current
 
 ## Current WASM boundary
 
-The current LNbits WASM host contract does not expose a safe extension hook for owning `/.well-known/lnurlp` or NIP-57 event cryptography. Therefore the optional classic Lightning Address and NIP-57 fields are retained as presentation metadata, while supported payments use each goal's direct LNURL-pay URL. This extension never claims to verify Nostr signatures or issue NIP-57 receipts.
+The current LNbits WASM host contract does not expose a safe extension hook for owning `/.well-known/lnurlp` or NIP-57 event cryptography. Therefore the WASM extension does not include Nostr recipient or Lightning Address username fields. Supported payments use each goal's direct LNURL-pay URL.
 
 The WASM host does not support internal wallet transfers, so the actual movement of sats to a target wallet must be performed externally. However, **automated scheduling is supported** via the [Scheduler extension](https://github.com/bitkarrot/scheduler) — see [Automated sweeps](#automated-sweeps) below.
 

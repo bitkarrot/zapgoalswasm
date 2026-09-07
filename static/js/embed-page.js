@@ -132,9 +132,8 @@
   }
 
   function tryBitcoinConnect(paymentRequest){
-    try{
-      var bc=window.ZapGoalsBitcoinConnect;
-      if(!bc||!bc.launchPaymentModal){showInvoiceDialog();return;}
+    var bc=window.ZapGoalsBitcoinConnect;
+    if(bc&&bc.launchPaymentModal){
       try{bc.init({appName:'ZapGoals',showBalance:false,persistConnection:true});}catch(_){}
       bcPayment=bc.launchPaymentModal({
         invoice:paymentRequest,
@@ -142,8 +141,7 @@
         onPaid:function(){paymentComplete();},
         onCancelled:function(){closeDialog();}
       });
-    }catch(e){
-      console.warn('Bitcoin Connect failed in iframe, falling back to QR:',e);
+    }else{
       showInvoiceDialog();
     }
   }

@@ -157,7 +157,6 @@ fn goal_from_request(req: &Value, id: &str, wallet_id: &str, existing: Option<&V
         "backgroundColor": color(req, "backgroundColor", "#FFFFFF")?, "textColor": color(req, "textColor", "#111111")?,
         "progressColor": color(req, "progressColor", "#2E7D32")?, "remainderColor": color(req, "remainderColor", "#E0E0E0")?,
         "fontName": text(req, "fontName", 64)?, "fontWeight": req.get("fontWeight").and_then(Value::as_u64).filter(|v| [400,600,700,800].contains(v)).unwrap_or(400),
-        "nostrPubkey": text(req, "nostrPubkey", 64)?, "lightningAddressUsername": text(req, "lightningAddressUsername", 64)?,
         "createdAt": existing.and_then(|v| v.get("createdAt")).and_then(Value::as_str).unwrap_or(&stamp), "updatedAt": stamp,
         "recurring": recurring, "recurrenceUnit": recurrence_unit, "recurrenceInterval": recurrence_interval,
         "recurrenceDayOfMonth": recurrence_day_of_month, "targetWalletId": target_wallet_id,

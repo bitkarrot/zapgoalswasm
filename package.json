@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build:templates": "node build-templates.js",
-    "build:bitcoin-connect": "esbuild frontend/bitcoin-connect.js --bundle --format=iife --platform=browser --target=es2020 --external:crypto --minify --outfile=static/js/bitcoin-connect.js && node tools/strip-generated.js",
+    "build:bitcoin-connect": "esbuild frontend/bitcoin-connect.js --bundle --format=esm --platform=browser --target=es2020 --external:crypto --minify --outfile=static/js/bitcoin-connect.js",
     "build": "npm run build:templates && npm run build:bitcoin-connect"
   },
   "devDependencies": {

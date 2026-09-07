@@ -54,7 +54,7 @@ async function createGoal(context, token, walletId, overrides = {}) {
       goalAmount: 100, targetDate: '2026-12-31T00:00:00Z', suggestedAmounts: [1, 21, 100, 500],
       walletId, walletMode: 'vanilla', backgroundColor: '#FFFFFF', textColor: '#1F2937',
       progressColor: '#F59E0B', remainderColor: '#E5E7EB', fontName: 'sans-serif', fontWeight: 700,
-      nostrPubkey: '', lightningAddressUsername: '', recurring: false, recurrenceUnit: 'month',
+      recurring: false, recurrenceUnit: 'month',
       recurrenceInterval: 1, recurrenceDayOfMonth: 0, targetWalletId: '', rolloverMode: 'counts_as_progress',
       sweepMode: 'target_amount', ...overrides
     }
