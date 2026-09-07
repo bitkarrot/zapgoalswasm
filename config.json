@@ -3,9 +3,9 @@
   "name": "Zap Goals!",
   "short_description": "Create customizable Lightning funding goals with live progress",
   "description": "Build branded public fundraising pages with live progress, suggested zap amounts, Bitcoin Connect, BOLT11 invoices, and direct LNURL-pay support in a sandboxed WASM extension.",
-  "description_md": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.1.1/description.md",
+  "description_md": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.2.0/description.md",
   "repo": "https://github.com/bitkarrot/zapgoalswasm",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "min_lnbits_version": "1.6.0rc3",
   "tile": "/ext-assets/zapgoalswasm/assets/icon.svg",
   "tags": [
@@ -22,10 +22,10 @@
   ],
   "images": [
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.1.1/screenshots/public-goal.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.2.0/screenshots/public-goal.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.1.1/screenshots/choose-zap.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.2.0/screenshots/choose-zap.png"
     }
   ],
   "extension_type": "wasm",
