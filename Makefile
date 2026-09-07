@@ -12,6 +12,7 @@ check:
 	python -m json.tool storage/migrations/001_init.json >/dev/null
 	python -m json.tool storage/migrations/002_payment_events.json >/dev/null
 	python -m json.tool storage/migrations/003_payment_new_total.json >/dev/null
+	python -m json.tool storage/migrations/004_recurring.json >/dev/null
 	cd wasm && cargo component check
 
 package: build
