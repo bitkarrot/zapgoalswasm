@@ -178,7 +178,8 @@ return function render(_ctx, _cache) {
                               flat: "",
                               round: "",
                               dense: "",
-                              icon: "sweep",
+                              color: "teal",
+                              icon: "sync",
                               "aria-label": "Sweep period",
                               onClick: $event => (_ctx.sweepGoal(props.row))
                             }, {
@@ -284,7 +285,9 @@ return function render(_ctx, _cache) {
                                     key: 0,
                                     flat: "",
                                     round: "",
-                                    icon: "sweep",
+                                    color: "teal",
+                                    icon: "sync",
+                                    "aria-label": "Sweep period",
                                     onClick: $event => (_ctx.sweepGoal(props.row))
                                   }, null, 8 /* PROPS */, ["onClick"]))
                                 : _createCommentVNode("v-if", true),
