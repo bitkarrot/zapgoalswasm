@@ -1,5 +1,4 @@
 wasm/target/
-wasm/module.wasm
 dist/
 .pytest_cache/
 __pycache__/
