@@ -3,15 +3,15 @@
     {
       "id": "zapgoalswasm",
       "repo": "https://github.com/bitkarrot/zapgoalswasm",
-      "version": "0.4.0",
-      "archive": "https://github.com/bitkarrot/zapgoalswasm/releases/download/v0.4.0/zapgoalswasm-0.4.0.zip",
-      "hash": "c35a7a04377850a6f8ed4511dfd72046cd9a058690c705916ee5e6bc0359d4ae",
+      "version": "0.4.1",
+      "archive": "https://github.com/bitkarrot/zapgoalswasm/releases/download/v0.4.1/zapgoalswasm-0.4.1.zip",
+      "hash": "41adf458b25de14e6de699f3059e0086423f97440f9032f73c3cdf099a8fcd79",
       "min_lnbits_version": "1.6.0",
       "name": "Zap Goals!",
       "short_description": "Create customizable Lightning funding goals with live progress",
-      "icon": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/static/assets/icon.png",
-      "details_link": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/config.json",
-      "html_url": "https://github.com/bitkarrot/zapgoalswasm/releases/tag/v0.4.0",
+      "icon": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.1/static/assets/icon.png",
+      "details_link": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.1/config.json",
+      "html_url": "https://github.com/bitkarrot/zapgoalswasm/releases/tag/v0.4.1",
       "extension_type": "wasm"
     }
   ]

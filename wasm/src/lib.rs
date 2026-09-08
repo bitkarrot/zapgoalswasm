@@ -248,6 +248,24 @@ fn projected_goal(goal: &Value, public: bool) -> Result<Value, String> {
     Ok(result)
 }
 
+// Stored accounting inputs can be unprojectable after an upgrade, for example
+// impossible period dates written by earlier versions. An owner listing keeps
+// such a goal visible with its stored presentation values plus an explicit
+// error marker so it can still be inspected and archived. Never substitute or
+// partially derive totals for inconsistent state; public views keep the error.
+fn degraded_goal(goal: &Value, error: &str) -> Value {
+    let mut result = public_goal(goal.clone());
+    result["accountingError"] = json!(error);
+    result["accountingOnly"] = json!(true);
+    result["legacyOpeningUnverified"] = json!(
+        goal.get("accountingVersion")
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+            == 0
+    );
+    result
+}
+
 // Stock SQL upserts update only supplied columns, but INSERT validation still
 // requires these mandatory columns. Never send stale accounting/archive state.
 fn goal_write_payload(goal: &Value, presentation: Option<&Value>) -> Result<Value, String> {
@@ -582,7 +600,9 @@ impl Guest for Component {
             }
             match projected_goal(&goal, false) {
                 Ok(v) => rows.push(v),
-                Err(e) => return err(&e),
+                // One unprojectable goal (e.g. corrupt legacy periods) must not
+                // hide every other goal from the owner's list.
+                Err(e) => rows.push(degraded_goal(&goal, &e)),
             }
         }
         ok(json!({"total": rows.len(), "data": rows}))
@@ -633,8 +653,10 @@ impl Guest for Component {
             None => return err("Goal not found after update"),
         };
         match projected_goal(&stored, false) {
+            // The presentation write above already committed; report the saved
+            // goal with an explicit accounting marker rather than a failure.
+            Err(e) => ok(degraded_goal(&stored, &e)),
             Ok(v) => ok(v),
-            Err(e) => err(&e),
         }
     }
     fn delete_goal(payload: String) -> String {
@@ -901,7 +923,17 @@ impl Guest for Component {
             }
             match projection(&goal, false) {
                 Ok(p) => views.push(json!({"goalId":goal["id"],"goal":p.goal,"totals":p.totals})),
-                Err(e) => return err(&e),
+                // A batch, read-only view skips unprojectable goals with a
+                // warning instead of failing every other goal's summary.
+                Err(e) => {
+                    host::log(&host::LogRequest {
+                        level: "warning".into(),
+                        message: format!(
+                            "Skipping unprojectable recurring goal {}: {e}",
+                            goal.get("id").and_then(Value::as_str).unwrap_or("?")
+                        ),
+                    });
+                }
             }
         }
         ok(

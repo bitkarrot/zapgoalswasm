@@ -676,16 +676,91 @@ fn invalid_calendar_views_fail_without_any_ledger_or_goal_write() {
         let mut goal = recurring_goal();
         goal[field] = value;
         host::seed("goals", goal.clone());
+        // Per-goal views keep the explicit error.
         for result in [
             Component::sweep_goal(json!({"goalId":"goal-a"}).to_string()),
-            Component::sweep_due("{}".into()),
             Component::list_periods(json!({"goalId":"goal-a"}).to_string()),
         ] {
             assert!(decode(result).get("error").is_some());
         }
+        // The read-only batch view skips the unprojectable goal with a warning
+        // instead of failing every other goal's summary.
+        let batch = decode(Component::sweep_due("{}".into()));
+        assert!(batch.get("error").is_none(), "{batch}");
+        assert!(batch["data"].as_array().unwrap().is_empty());
+        assert!(host::state(|s| s
+            .logs
+            .iter()
+            .any(|entry| entry.starts_with("warning:Skipping unprojectable recurring goal goal-a"))));
         assert!(host::state(|s| s.writes.is_empty()));
         assert_eq!(host::row("goals", "goal-a").unwrap(), goal);
     }
+}
+#[test]
+fn corrupt_legacy_recurring_goal_degrades_per_goal_and_never_fails_owner_lists() {
+    // 0.3.x sweeps could store a "current" period starting in the future.
+    // Such a goal stays listed with stored values plus an explicit marker,
+    // never substitute totals, and remains archivable by its owner.
+    let healthy = setup();
+    let mut corrupt = recurring_goal();
+    corrupt["id"] = json!("goal-bad");
+    corrupt["title"] = json!("Legacy corrupt");
+    corrupt["currentAmount"] = json!(121);
+    corrupt["accountingVersion"] = json!(0);
+    corrupt["periodIndex"] = json!(2);
+    corrupt["periodStartDate"] = json!("2027-01-31T00:00:00Z");
+    corrupt["periodEndDate"] = json!("2027-02-28T00:00:00Z");
+    host::seed("goals", corrupt.clone());
+
+    let list = decode(Component::list_goals("{}".into()));
+    assert!(list.get("error").is_none(), "{list}");
+    let rows = list["data"].as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    let bad = rows.iter().find(|row| row["id"] == "goal-bad").unwrap();
+    assert_eq!(
+        bad["accountingError"],
+        "as_of precedes the accounting start; clock inconsistency"
+    );
+    assert_eq!(bad["accountingOnly"], true);
+    assert_eq!(bad["legacyOpeningUnverified"], true);
+    assert_eq!(bad["currentAmount"], 121);
+    assert_eq!(bad["goalAmount"], 1000);
+    assert!(bad.get("accountingTotals").is_none());
+    assert!(bad.get("totals").is_none());
+    let good = rows.iter().find(|row| row["id"] == "goal-a").unwrap();
+    assert!(good.get("accountingError").is_none());
+    assert_eq!(good["accountingTotals"]["currentAmount"], 0);
+
+    // Public views and owner period views keep the explicit error.
+    assert!(decode(Component::get_public_goal(
+        json!({"goalId":"goal-bad"}).to_string()
+    ))
+    .get("error")
+    .is_some());
+    assert!(decode(Component::list_periods(
+        json!({"goalId":"goal-bad"}).to_string()
+    ))
+    .get("error")
+    .is_some());
+
+    // A presentation edit commits and reports the saved goal with the marker.
+    let updated = decode(Component::update_goal(
+        json!({"goalId":"goal-bad", "title":"Legacy corrupt, retitled"}).to_string(),
+    ));
+    assert!(updated.get("error").is_none(), "{updated}");
+    assert_eq!(updated["accountingError"], bad["accountingError"]);
+    assert_eq!(host::row("goals", "goal-bad").unwrap()["title"], "Legacy corrupt, retitled");
+
+    // Archiving removes it from the owner list; nothing was double-counted.
+    assert_eq!(
+        decode(Component::delete_goal(json!({"goalId":"goal-bad"}).to_string()))["archived"],
+        true
+    );
+    let after = decode(Component::list_goals("{}".into()));
+    assert!(after.get("error").is_none());
+    assert_eq!(after["data"].as_array().unwrap().len(), 1);
+    assert_eq!(after["data"][0]["id"], healthy["id"]);
+    assert!(host::state(|s| s.writes.iter().all(|(table, _)| table == "goals")));
 }
 #[test]
 fn all_views_and_sweeps_share_projection_and_never_mutate_inputs() {
