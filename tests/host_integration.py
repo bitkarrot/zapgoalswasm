@@ -314,7 +314,7 @@ class Proof:
 
         async with self.core_db.connect() as conn:
             await m000_create_migrations_table(conn)
-        ext = InstallableExtension(id=EXTENSION, name="Zap Goals!", version="0.5.1")
+        ext = InstallableExtension(id=EXTENSION, name="Zap Goals!", version="0.5.2")
         migration_dir = self.extension / "storage" / "migrations"
         deferred = self.root / "deferred_migrations"
         deferred.mkdir()
@@ -692,7 +692,7 @@ class Proof:
             "actual component loaded only from isolated runtime copy",
         )
         self.check(
-            self.wasm.version == "0.5.1", "component config is pending 0.5.1 build"
+            self.wasm.version == "0.5.2", "component config is pending 0.5.2 build"
         )
         wallets = {
             WALLET: SimpleNamespace(

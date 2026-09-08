@@ -66,9 +66,16 @@ def test_runtime_routes_and_permissions_match_supported_features():
         "rolloverMode",
         "sweepMode",
     } <= set(public["goals"]["public_fields"])
-    for image in config["images"]:
-        assert (ROOT / "screenshots" / image["uri"].rsplit("/", 1)[-1]).is_file()
-        assert "invoice-only-" in image["uri"]
+    # The first gallery image is the classic-style public-goal shot; the rest
+    # are the recaptured invoice-only captures. Every image must resolve from
+    # this repository at its release-tag URL.
+    for index, image in enumerate(config["images"]):
+        filename = image["uri"].rsplit("/", 1)[-1]
+        assert (ROOT / "screenshots" / filename).is_file()
+        if index == 0:
+            assert filename == "public-goal.png"
+        else:
+            assert "invoice-only-" in image["uri"]
 
 
 def test_packaging_is_deterministic_and_contains_notices(tmp_path):

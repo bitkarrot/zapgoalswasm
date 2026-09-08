@@ -18,6 +18,4 @@ Recurring periods advance automatically from their fixed calendar. Late payments
 
 Sweeps are manual, owner-confirmed transfers between your own wallets; nothing is ever sent automatically. This extension respects the stock LNbits WASM sandbox. Bitcoin Connect, LNURL-pay, Lightning Addresses, NIP-57, manual/early resets, and external iframe embedding are not offered. The supported embed is a first-party JavaScript widget for websites you control.
 
-An upgrade from 0.3.x preserves the old displayed balance as an **unreconciled opening balance**, retains legacy records without recounting them, and quarantines old invoices lacking a private issuance record. Review the upgrade instructions and reconcile outstanding old invoices before cutover.
-
 Created by bitkarrot. MIT licensed, with the retained QR generator's notices included.
