@@ -36,7 +36,10 @@ def test_runtime_routes_and_permissions_match_supported_features():
     assert not {"lnurl-params", "lnurl-callback"} & exports
     assert all(not route["path"].endswith("/embed") for route in config["ui_routes"])
     policies = {p["id"]: p for p in config["permissions"]}
-    assert not {"wallet.pay_invoice", "http.request"} & policies.keys()
+    # The manual sweep intentionally uses both wallet payment permissions;
+    # generic network access is still not requested.
+    assert {"wallet.create_invoice", "wallet.pay_invoice"} <= policies.keys()
+    assert "http.request" not in policies
     assert policies["ext.storage.append_public"]["policies"] == [
         {
             "table": "invoice_issuances",

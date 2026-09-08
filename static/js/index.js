@@ -3,7 +3,7 @@
   const defaultGoal = walletId => ({walletId: walletId || null, title: '', descriptionAbove: '', descriptionBelow: '', goalAmount: 10000, targetDate: '', suggestedAmounts: [21, 100, 500, 1000], walletMode: 'vanilla', backgroundColor: '#FFFFFF', textColor: '#1F2937', progressColor: '#F59E0B', remainderColor: '#E5E7EB', fontName: 'sans-serif', fontWeight: 400, currentAmount: 0, recurring: false, recurrenceUnit: 'month', recurrenceInterval: 1, recurrenceDayOfMonth: 0, targetWalletId: '', rolloverMode: 'counts_as_progress', sweepMode: 'target_amount'})
   const app = Vue.createApp({
     render: window.ZAPGOALS_INDEX_RENDER(),
-    data: () => ({goals: [], wallets: [], loading: false, loadError: '', saving: false, formError: '', isDark: false, formDialog: {show: false, editing: false, original: null, data: defaultGoal(null)}, deleteDialog: {show: false, loading: false, goal: null}, embedDialog: {show: false, goal: null}, periodsDialog: {show: false, goal: null, periods: []}, recurrenceUnitOptions: [{label: 'Daily', value: 'day'}, {label: 'Weekly', value: 'week'}, {label: 'Monthly', value: 'month'}, {label: 'Quarterly', value: 'quarter'}, {label: 'Semi-annual', value: 'half_year'}, {label: 'Annual', value: 'year'}], sweepModeOptions: [{label: 'Target amount only', value: 'target_amount'}, {label: 'Entire amount', value: 'entire_amount'}], rolloverModeOptions: [{label: 'Counts as next period progress', value: 'counts_as_progress'}, {label: 'Reset progress to zero', value: 'reset_to_zero'}], fontOptions: ['sans-serif', 'system-ui, sans-serif', 'Arial, sans-serif', '"Trebuchet MS", sans-serif', 'Verdana, sans-serif', 'Tahoma, sans-serif', 'serif', 'Georgia, serif', '"Times New Roman", serif', 'monospace', '"Courier New", monospace'].map(value => ({label: value.replace(/,.*$/, '').replaceAll('"', ''), value})), fontWeightOptions: [{label: 'Regular', value: 400}, {label: 'Semi-bold', value: 600}, {label: 'Bold', value: 700}, {label: 'Extra-bold', value: 800}] }),
+    data: () => ({goals: [], wallets: [], loading: false, loadError: '', saving: false, formError: '', isDark: false, formDialog: {show: false, editing: false, original: null, data: defaultGoal(null)}, deleteDialog: {show: false, loading: false, goal: null}, sweepDialog: {show: false, loading: false, goal: null}, embedDialog: {show: false, goal: null}, periodsDialog: {show: false, goal: null, periods: []}, recurrenceUnitOptions: [{label: 'Daily', value: 'day'}, {label: 'Weekly', value: 'week'}, {label: 'Monthly', value: 'month'}, {label: 'Quarterly', value: 'quarter'}, {label: 'Semi-annual', value: 'half_year'}, {label: 'Annual', value: 'year'}], sweepModeOptions: [{label: 'Target amount only', value: 'target_amount'}, {label: 'Entire amount', value: 'entire_amount'}], rolloverModeOptions: [{label: 'Counts as next period progress', value: 'counts_as_progress'}, {label: 'Reset progress to zero', value: 'reset_to_zero'}], fontOptions: ['sans-serif', 'system-ui, sans-serif', 'Arial, sans-serif', '"Trebuchet MS", sans-serif', 'Verdana, sans-serif', 'Tahoma, sans-serif', 'serif', 'Georgia, serif', '"Times New Roman", serif', 'monospace', '"Courier New", monospace'].map(value => ({label: value.replace(/,.*$/, '').replaceAll('"', ''), value})), fontWeightOptions: [{label: 'Regular', value: 400}, {label: 'Semi-bold', value: 600}, {label: 'Bold', value: 700}, {label: 'Extra-bold', value: 800}] }),
     computed: {
       financialRulesLocked() { return this.formDialog.editing && Boolean(this.formDialog.original?.recurring) },
       walletOptions() { return this.wallets.map(wallet => ({label: wallet.name, value: wallet.id})) },
@@ -11,7 +11,7 @@
       previewPercent() { const target = Number(this.formDialog.data.goalAmount) || 1; return Math.min(100, Math.max(0, Number(this.formDialog.data.currentAmount || 0) / target * 100)) },
       previewBarWidth() { return this.previewPercent * 6.52 },
       embedScriptSnippet() { const goal = this.embedDialog.goal; if (!goal) return ''; return `<script src="${this.embedScriptUrl(goal)}" data-goal="${goal.id}" async><\/script>` },
-      periodColumns() { return [{name: 'index', label: '#', field: 'periodIndex', align: 'left'}, {name: 'start', label: 'Start', field: row => this.formatDate(row.startDate), align: 'left'}, {name: 'end', label: 'End', field: row => this.formatDate(row.endDate), align: 'left'}, {name: 'zapped', label: 'Zapped', field: row => this.formatSats(row.zappedAmount), align: 'left'}, {name: 'recorded', label: 'Recorded allocation (no transfer)', field: row => this.formatSats(row.movedAmount), align: 'left'}, {name: 'rollover', label: 'Rollover', field: row => this.formatSats(row.rolloverAmount), align: 'left'}, {name: 'retained', label: 'Retained excess', field: row => this.formatSats(row.retainedAmount), align: 'left'}] }
+      periodColumns() { return [{name: 'index', label: '#', field: 'periodIndex', align: 'left'}, {name: 'start', label: 'Start', field: row => this.formatDate(row.startDate), align: 'left'}, {name: 'end', label: 'End', field: row => this.formatDate(row.endDate), align: 'left'}, {name: 'zapped', label: 'Zapped', field: row => this.formatSats(row.zappedAmount), align: 'left'}, {name: 'recorded', label: 'Recorded allocation', field: row => this.formatSats(row.movedAmount), align: 'left'}, {name: 'rollover', label: 'Rollover', field: row => this.formatSats(row.rolloverAmount), align: 'left'}, {name: 'retained', label: 'Retained excess', field: row => this.formatSats(row.retainedAmount), align: 'left'}] }
     },
     methods: {
       async api(method, path, body) { const result = await LNbitsBridge.callApi(method, API + path, body); if (result?.error) throw new Error(result.error); return result },
@@ -69,6 +69,22 @@
         finally { this.saving = false }
       },
       confirmDelete(goal) { this.deleteDialog = {show: true, loading: false, goal} },
+      walletName(id) { return this.wallets.find(wallet => wallet.id === id)?.name || 'the target wallet' },
+      confirmSweep(goal) { this.sweepDialog = {show: true, loading: false, goal} },
+      async sweepGoal() {
+        if (!this.sweepDialog.goal || this.sweepDialog.loading) return
+        this.sweepDialog.loading = true
+        try {
+          const result = await this.api('POST', `/goals/${this.sweepDialog.goal.id}/sweep`)
+          if (result.swept) await LNbitsBridge.notify(`Moved ${this.formatSats(result.amount)} to ${this.walletName(this.sweepDialog.goal.targetWalletId)}.`, 'positive')
+          else if (result.duplicate) await LNbitsBridge.notify('This allocation was already swept; nothing was moved.', 'warning')
+          else await LNbitsBridge.notify(result.reason || 'Nothing available to sweep yet.', 'warning')
+          this.sweepDialog.show = false
+          await this.load()
+        } catch (error) {
+          await LNbitsBridge.notify(error.message, 'negative').catch(() => {})
+        } finally { this.sweepDialog.loading = false }
+      },
       async deleteGoal() { if (!this.deleteDialog.goal) return; this.deleteDialog.loading = true; try { await this.api('DELETE', `/goals/${this.deleteDialog.goal.id}`); this.goals = this.goals.filter(goal => goal.id !== this.deleteDialog.goal.id); this.deleteDialog.show = false } catch (error) { await LNbitsBridge.notify(error.message, 'negative') } finally { this.deleteDialog.loading = false } },
       publicUrl(goal) { return `${location.origin}/ext/zapgoalswasm/public/${goal.id}` },
       embedScriptUrl(goal) { return `${location.origin}/ext-assets/zapgoalswasm/js/embed.js` },

@@ -22,6 +22,11 @@ interface host {
   record create-invoice-public-request { source-id: string, amount: u64, currency: string, memo: string, extra: list<tuple<string, string>> }
   record create-invoice-response { payment-hash: string, payment-request: string, checking-id: string }
   create-invoice-public: func(req: create-invoice-public-request) -> create-invoice-response;
+  record create-invoice-request { wallet-id: string, amount: f64, currency: string, memo: string, tag: string, extra: list<tuple<string, string>> }
+  create-invoice: func(req: create-invoice-request) -> create-invoice-response;
+  record pay-invoice-request { wallet-id: string, payment-request: string, max-sat: option<u64>, description: string, extra: list<tuple<string, string>> }
+  record pay-invoice-response { ok: bool, error: option<string>, checking-id: option<string>, payment-hash: option<string>, status: option<string>, amount-msat: s64, fee-msat: s64, pending: bool, success: bool }
+  pay-invoice: func(req: pay-invoice-request) -> pay-invoice-response;
   record wallet-summary { id: string, name: string, currency: option<string> }
   record list-wallets-response { wallets: list<wallet-summary> }
   list-user-wallets: func() -> list-wallets-response;

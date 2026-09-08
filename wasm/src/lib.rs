@@ -567,7 +567,109 @@ fn quarantine(reason: &str) -> String {
     ok(json!({"ignored": true, "quarantined": true, "reason": reason}))
 }
 
+// Manual sweep transfer: moves `available` allocated sats from the goal's
+// receiving wallet to the owner's target wallet via an internal invoice. A
+// pending marker is durable before any wallet call, so a duplicate request at
+// the same accounting state never reaches payment. The claim is verified by
+// read-back; an overwritten marker aborts before any funds move. The target
+// invoice's settlement event carries sweep metadata but no issuance binding,
+// so the settlement handler quarantines it: sweeps never credit goal progress.
+fn sweep_transfer(
+    goal_id: &str,
+    goal: &Value,
+    marker_id: &str,
+    closed: u64,
+    available: u64,
+    target: &str,
+    goal_wallet: &str,
+    moved: u64,
+    swept_total: u64,
+) -> String {
+    let attempt = id();
+    let title = goal
+        .get("title")
+        .and_then(Value::as_str)
+        .unwrap_or("goal");
+    let marker = json!({"id": marker_id, "goalId": goal_id, "attempt": attempt, "periodCount": closed,
+        "amount": available, "targetWalletId": target, "paymentHash": "", "checkingId": "",
+        "status": "pending", "error": "", "createdAt": now(), "completedAt": ""});
+    if !set("sweeps", &marker) {
+        return err("Could not record the sweep; no payment was made");
+    }
+    match get("sweeps", marker_id, false) {
+        Some(row) if row.get("attempt").and_then(Value::as_str) == Some(attempt.as_str()) => {}
+        _ => return err("A concurrent sweep claim won; no payment was made"),
+    }
+    let invoice = host::create_invoice(&host::CreateInvoiceRequest {
+        wallet_id: target.into(),
+        amount: available as f64,
+        currency: "sat".into(),
+        memo: format!("ZapGoals sweep: {title}"),
+        tag: "zapgoalswasm".into(),
+        extra: vec![
+            ("goalId".into(), goal_id.into()),
+            ("sweepId".into(), marker_id.into()),
+            ("source".into(), "sweep_target".into()),
+        ],
+    });
+    if invoice.payment_hash.is_empty() || invoice.payment_request.is_empty() {
+        fail_sweep(marker_id, "Could not create the target wallet invoice");
+        return err("Sweep failed: could not create an invoice on the target wallet; no payment was made");
+    }
+    let payment = host::pay_invoice(&host::PayInvoiceRequest {
+        wallet_id: goal_wallet.into(),
+        payment_request: invoice.payment_request.clone(),
+        max_sat: Some(available),
+        description: format!("ZapGoals sweep: {title}"),
+        extra: vec![
+            ("goalId".into(), goal_id.into()),
+            ("sweepId".into(), marker_id.into()),
+        ],
+    });
+    if !payment.ok {
+        let reason = payment
+            .error
+            .clone()
+            .unwrap_or_else(|| "unknown payment error".into());
+        fail_sweep(marker_id, &reason);
+        return err(&format!(
+            "Sweep payment failed: {reason}. No funds were transferred."
+        ));
+    }
+    let checking_id = payment.checking_id.clone().unwrap_or_default();
+    let pay_status = payment.status.clone().unwrap_or_default();
+    let mut final_marker = marker;
+    final_marker["paymentHash"] = json!(invoice.payment_hash);
+    final_marker["checkingId"] = json!(checking_id);
+    final_marker["status"] = json!("completed");
+    final_marker["completedAt"] = json!(now());
+    if !set("sweeps", &final_marker) {
+        // The transfer was submitted but could not be recorded: fail closed so
+        // a later sweep cannot double-pay before an owner reconciles this row.
+        host::log(&host::LogRequest {
+            level: "error".into(),
+            message: format!(
+                "Sweep {marker_id} transferred {available} sats but could not record completion; future sweeps are blocked until reconciled"
+            ),
+        });
+        return err("The transfer was submitted but could not be recorded; reconcile this sweep before sweeping again");
+    }
+    ok(json!({"swept": true, "goalId": goal_id, "amount": available, "paymentHash": invoice.payment_hash,
+        "checkingId": checking_id, "status": pay_status,
+        "movedAmount": moved, "sweptAmount": swept_total + available, "available": 0, "closedPeriods": closed}))
+}
+
+fn fail_sweep(marker_id: &str, reason: &str) {
+    if let Some(mut row) = get("sweeps", marker_id, false) {
+        row["status"] = json!("failed");
+        row["error"] = json!(reason);
+        row["completedAt"] = json!(now());
+        set("sweeps", &row);
+    }
+}
+
 struct Component;
+
 impl Guest for Component {
     fn create_goal(payload: String) -> String {
         let req = match parse(&payload) {
@@ -885,12 +987,86 @@ impl Guest for Component {
         if goal.get("recurring").and_then(Value::as_bool) != Some(true) {
             return err("Goal is not recurring");
         }
-        match projection(&goal, false) {
-            Ok(p) => ok(
-                json!({"goalId":goal_id,"accountingOnly":true,"readOnly":true,"goal":p.goal,"data":p.history,"totals":p.totals}),
-            ),
-            Err(e) => err(&e),
+        if goal.get("archived").and_then(Value::as_bool) == Some(true) {
+            return err("Archived goals cannot be swept");
         }
+        let goal_wallet = goal
+            .get("walletId")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
+        let target = goal
+            .get("targetWalletId")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
+        if target.is_empty() {
+            return err("No target wallet is configured for this goal");
+        }
+        if target == goal_wallet {
+            return err("The target wallet must be different from the goal's wallet");
+        }
+        // Defense in depth on top of the host's own wallet-ownership checks.
+        if !owns_wallet(&target) {
+            return err("The target wallet is not available to this user");
+        }
+        let projection = match projection(&goal, false) {
+            Ok(p) => p,
+            Err(e) => return err(&e),
+        };
+        let closed = projection
+            .totals
+            .get("closedPeriods")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        let moved = projection
+            .totals
+            .get("movedAmount")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        // Completed sweeps are durable, append-only facts; the transferable
+        // amount is what closed periods allocated minus what already moved.
+        let sweeps = match stable_rows("sweeps", Some(goal_id), false) {
+            Ok(v) => v,
+            Err(e) => return err(&e),
+        };
+        let mut swept_total: u64 = 0;
+        for row in &sweeps {
+            if row.get("goalId").and_then(Value::as_str) != Some(goal_id)
+                || row.get("status").and_then(Value::as_str) != Some("completed")
+            {
+                continue;
+            }
+            swept_total = match swept_total.checked_add(
+                row.get("amount").and_then(Value::as_u64).unwrap_or(0),
+            ) {
+                Some(total) => total,
+                None => return err("Sweep accounting overflow; reconcile manually"),
+            };
+        }
+        if swept_total > moved {
+            return err("Recorded sweeps exceed the current allocation; reconcile this goal manually before sweeping again");
+        }
+        let available = moved - swept_total;
+        if available == 0 {
+            return ok(json!({"swept": false, "goalId": goal_id, "reason": "Nothing available to sweep yet",
+                "movedAmount": moved, "sweptAmount": swept_total, "available": 0, "closedPeriods": closed}));
+        }
+        // The marker id is deterministic per covered period count: a second
+        // click (or request) at the same accounting state hits the existing
+        // marker and never reaches wallet calls. Failed markers are retryable.
+        let marker_id = format!("sweep:{goal_id}:{closed}");
+        if let Some(existing) = get("sweeps", &marker_id, false) {
+            return match existing.get("status").and_then(Value::as_str) {
+                Some("completed") => ok(json!({"swept": false, "duplicate": true, "goalId": goal_id,
+                    "paymentHash": existing.get("paymentHash").cloned().unwrap_or(json!("")),
+                    "amount": existing.get("amount").cloned().unwrap_or(json!(0)),
+                    "movedAmount": moved, "sweptAmount": swept_total, "available": 0, "closedPeriods": closed})),
+                Some("pending") => err("A sweep for this goal is already in progress; no payment was made"),
+                _ => sweep_transfer(goal_id, &goal, &marker_id, closed, available, &target, &goal_wallet, moved, swept_total),
+            };
+        }
+        sweep_transfer(goal_id, &goal, &marker_id, closed, available, &target, &goal_wallet, moved, swept_total)
     }
     fn list_periods(payload: String) -> String {
         let req = match parse(&payload) {

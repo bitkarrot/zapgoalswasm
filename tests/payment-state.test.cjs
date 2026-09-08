@@ -80,14 +80,18 @@ test('invoice amount, goal and comment are immutable; payment never increments t
   assert.equal(calls.api.length, 1, 'duplicate creation is blocked')
   pending.resolve(invoice('a'))
   await work
+  context.LNbitsBridge.callApi = originalApi
   assert.equal(app.invoice.amount, 21)
   assert.equal(Object.isFrozen(app.invoice), true)
   assert.equal(attempt.comment, 'original comment')
   assert.equal(attempt.goalId, 'test-goal')
   await settle()
-  assert.equal(app.paymentState, 'paid')
-  assert.equal(app.goal.currentAmount, 10)
-  assert.equal(app.invoiceDialog, true)
+  // Confirmation is a toast plus an immediate close; no attempt survives.
+  assert.ok(calls.notified.some(entry => entry.message.includes('Payment received') && entry.type === 'positive'))
+  assert.equal(app.invoiceDialog, false)
+  assert.equal(app.paymentState, 'idle')
+  assert.equal(app.activeAttempt, null)
+  assert.equal(app.goal.currentAmount, 10, 'displayed total only moves via the authoritative goal read')
 })
 
 test('QR is exposed before a slow subscription finishes', async () => {
@@ -120,17 +124,19 @@ test('subscription rejection retains the usable invoice and retry does not creat
   assert.equal(app.monitoringError, '')
   assert.equal(calls.api.filter(call => call.method === 'POST').length, 1)
   await settle()
-  assert.equal(app.paymentState, 'paid')
+  assert.equal(app.paymentState, 'idle')
+  assert.equal(app.invoiceDialog, false, 'a confirmed payment closes the dialog automatically')
 })
 
 test('settlement arriving before subscribe resolves stays paid and cleans the late subscription', async () => {
   const {app, context, calls, settle} = setup()
   context.LNbitsBridge.subscribePayment = async (hash, id) => { calls.subscribed.push({hash, id}); await settle() }
   await app.createInvoice()
-  assert.equal(app.paymentState, 'paid')
-  assert.equal(app.invoiceDialog, true)
+  assert.equal(app.paymentState, 'idle')
+  assert.equal(app.invoiceDialog, false)
   assert.equal(app.subscriptionId, '')
   assert.ok(calls.unsubscribed.includes(calls.subscribed[0].id))
+  assert.ok(calls.notified.some(entry => entry.message.includes('Payment received')))
   assert.equal(app.goal.currentAmount, 10)
 })
 
@@ -151,7 +157,8 @@ test('socket event contents cannot confirm payment without a verified receipt', 
   assert.equal(app.paymentState, 'pending', 'a forged settled event is not a verified receipt')
   receiptStatus.paid = true
   await app.onBridgeEvent({event: 'payment.update', subscriptionId: id, data: {pending: true, status: 'pending'}})
-  assert.equal(app.paymentState, 'paid', 'even a pending wakeup is sufficient once the receiver verifies the receipt')
+  assert.equal(app.paymentState, 'idle', 'even a pending wakeup confirms once the receiver verifies the receipt')
+  assert.equal(app.invoiceDialog, false)
 })
 
 test('duplicate and stale settlement callbacks cannot complete a subsequent invoice, even with a reused hash', async () => {
@@ -163,8 +170,7 @@ test('duplicate and stale settlement callbacks cannot complete a subsequent invo
   const firstId = app.subscriptionId
   await settle()
   await app.checkInvoiceStatus(firstAttempt)
-  assert.equal([...timers.values()].filter(timer => !timer.cleared).length, 1)
-  app.finishPayment()
+  assert.equal(app.invoiceDialog, false, 'settlement closed the dialog automatically')
   app.amount = 1
   await app.createInvoice()
   assert.notEqual(app.subscriptionId, firstId)
@@ -174,63 +180,66 @@ test('duplicate and stale settlement callbacks cannot complete a subsequent invo
   assert.equal(app.invoice.amount, 1)
 })
 
-test('A → Done → B → A queued refresh cannot detach B or load stale progress', async () => {
+test('a receipt timer queued before completion cannot detach a subsequent invoice', async () => {
   const {app, calls, settle, timers} = setup()
-  await app.createInvoice()
+  const work = app.createInvoice()
+  await flush()
+  // Capture every timeout callback scheduled while attempt A was live.
+  const staleTimers = [...timers.values()].filter(timer => !timer.cleared).map(timer => timer.fn)
+  await work
   await settle()
-  const timerId = app.authoritativeRetryTimer
-  const staleTimer = timers.get(timerId).fn
-  app.finishPayment()
-  assert.equal(timers.get(timerId).cleared, true)
+  assert.equal(app.invoiceDialog, false)
   app.amount = 1
   await app.createInvoice()
   const secondId = app.subscriptionId
   const callCount = calls.api.length
-  await staleTimer() // A timer may already have been queued before clearTimeout.
+  for (const fn of staleTimers) await fn()
+  await flush()
   assert.equal(app.paymentState, 'pending')
   assert.equal(app.subscriptionId, secondId)
-  assert.equal(calls.api.length, callCount)
+  assert.equal(calls.api.length, callCount, 'stale callbacks issue no requests')
   assert.equal(calls.unsubscribed.includes(secondId), false)
+  assert.equal(app.invoice.amount, 1)
 })
 
-test('an in-flight old authoritative refresh cannot modify or unsubscribe a newer attempt', async () => {
-  const {app, context, settle, timers, calls} = setup()
+test('an in-flight goal refresh from a completed payment cannot unsubscribe a newer attempt', async () => {
+  const {app, context, settle, calls} = setup()
   await app.createInvoice()
-  await settle()
   const pending = deferred()
   const originalApi = context.LNbitsBridge.callApi
-  context.LNbitsBridge.callApi = (method, ...args) => method === 'GET' ? pending.promise : originalApi(method, ...args)
-  const refresh = timers.get(app.authoritativeRetryTimer).fn()
-  app.finishPayment()
+  context.LNbitsBridge.callApi = (method, url, ...args) => url.includes('/payments/') ? originalApi(method, url, ...args) : method === 'GET' ? pending.promise : originalApi(method, url, ...args)
+  await settle()
   app.amount = 1
   await app.createInvoice()
   const secondId = app.subscriptionId
   pending.resolve({...app.goal, currentAmount: 999})
-  await refresh
-  assert.equal(app.goal.currentAmount, 10)
+  await flush()
+  // The goal view may show fresh authoritative data; attempt state must not
+  // be touched and the newer subscription must stay alive.
+  assert.equal(app.goal.currentAmount, 999, 'authoritative goal data is allowed to update')
   assert.equal(app.subscriptionId, secondId)
   assert.equal(app.paymentState, 'pending')
   assert.equal(calls.unsubscribed.includes(secondId), false)
-  assert.equal(app.authoritativeRetryTimer, null)
 })
 
 test('authoritative lower totals and rollover are applied; older polls cannot overwrite a newer refresh', async () => {
-  const {app, context, settle, timers} = setup()
+  const {app, context, settle} = setup()
   await app.createInvoice()
   const oldPoll = deferred(), fresh = deferred()
   let requests = 0
   const originalApi = context.LNbitsBridge.callApi
   context.LNbitsBridge.callApi = (method, url) => url.includes('/payments/') ? originalApi(method, url) : ++requests === 1 ? oldPoll.promise : fresh.promise
   const oldWork = app.loadGoal(true, true)
+  // Settling fires the confirmation refresh (request 2) while the older poll
+  // (request 1) is still in flight.
   await settle()
-  const refresh = timers.get(app.authoritativeRetryTimer).fn()
   fresh.resolve({...app.goal, currentAmount: 0, percent: 0, periodIndex: 1})
-  await refresh
+  await flush()
   assert.equal(app.goal.currentAmount, 0)
   assert.equal(app.goal.periodIndex, 1)
   oldPoll.resolve({...app.goal, currentAmount: 900, periodIndex: 0})
   await oldWork
-  assert.equal(app.goal.currentAmount, 0)
+  assert.equal(app.goal.currentAmount, 0, 'an older poll cannot overwrite a newer refresh')
   assert.equal(app.goal.periodIndex, 1)
 })
 
@@ -351,19 +360,17 @@ test('polling continues on the receipt; unmount removes all intervals, timers an
   assert.equal(intervals.size, 2)
   await app.createInvoice()
   await settle()
-  const retry = app.authoritativeRetryTimer
+  assert.equal(app.invoiceDialog, false, 'confirmation closes the dialog automatically')
   context.LNbitsBridge.callApi = async () => ({...app.goal, currentAmount: 0, periodIndex: 1})
   app.lastGoalLoad = 0
   intervals.get(app.pollTimer).fn()
   await app.loadInFlight
   assert.equal(app.goal.currentAmount, 0)
-  assert.equal(app.paymentState, 'paid')
+  assert.equal(app.paymentState, 'idle')
   unmount()
-  assert.equal(timers.get(retry).cleared, true)
+  assert.ok([...timers.values()].every(timer => timer.cleared))
   assert.ok([...intervals.values()].every(timer => timer.cleared))
   assert.equal(calls.removedListeners, 1)
-  await timers.get(retry).fn()
-  assert.equal(app.authoritativeRetryTimer, null)
 })
 
 test('unmount invalidates an in-flight goal response and prevents branding changes', async () => {
@@ -443,11 +450,17 @@ test('fixed-calendar period history is read-only, with allocation, rollover and 
   await app.openPeriodsDialog({id: 'goal', recurring: true})
   assert.equal(calls.api[0].method, 'GET')
   assert.equal(calls.api[0].url, '/api/v1/ext/zapgoalswasm/goals/goal/periods')
-  assert.equal(app.periodColumns.find(column => column.name === 'recorded').label, 'Recorded allocation (no transfer)')
+  assert.equal(app.periodColumns.find(column => column.name === 'recorded').label, 'Recorded allocation')
   assert.equal(app.periodColumns.find(column => column.name === 'retained').field(period), '21 sats')
   const template = read('templates/index.html')
+  const adminJs = read('static/js/index.js')
   assert.match(template, /Periods advance automatically on the fixed calendar/)
-  assert.doesNotMatch(template + read('static/js/index.js'), /sweepGoal|confirmSweep|sweepDialog|Close period|scheduler extension/)
+  // The history view stays a read-only GET; sweeping is a separate manual action.
+  assert.match(template + adminJs, /confirmSweep/)
+  assert.match(template, /manual sweep/i)
+  assert.match(template, /moves real funds now/i)
+  assert.doesNotMatch(adminJs, /POST[^']*\/periods/)
+  assert.doesNotMatch(template + adminJs, /Close period|scheduler extension|no funds are transferred/i)
 })
 
 
@@ -477,7 +490,8 @@ test('untrusted socket success cannot confirm while durable receipt is absent or
   assert.ok(checks.every(call => call.url === `/api/v1/ext/zapgoalswasm/goals/test-goal/payments/${app.invoice.paymentHash}`))
   receiptStatus.paid = true
   await app.onBridgeEvent({event: 'payment.settled', subscriptionId: id})
-  assert.equal(app.paymentState, 'paid')
+  assert.equal(app.paymentState, 'idle')
+  assert.equal(app.invoiceDialog, false)
 })
 
 test('receipt polling confirms without any socket event even after subscription failure', async () => {
@@ -492,7 +506,8 @@ test('receipt polling confirms without any socket event even after subscription 
   assert.equal(next.delay, 3000)
   receiptStatus.paid = true
   await next.fn()
-  assert.equal(app.paymentState, 'paid')
+  assert.equal(app.paymentState, 'idle')
+  assert.equal(app.invoiceDialog, false)
   assert.equal(app.monitoringError, '')
   assert.equal(app.receiptPollTimer, null)
   assert.equal(app.goal.currentAmount, 10)
@@ -508,7 +523,8 @@ test('receipt API failures keep QR usable and schedule another authoritative che
   assert.match(app.receiptError, /keep checking/)
   context.LNbitsBridge.callApi = async () => ({paid: true})
   await timers.get(app.receiptPollTimer).fn()
-  assert.equal(app.paymentState, 'paid')
+  assert.equal(app.paymentState, 'idle')
+  assert.equal(app.invoiceDialog, false)
   assert.equal(app.receiptError, '')
 })
 
@@ -573,8 +589,9 @@ test('A receipt response and queued poll after closing A cannot mark or detach B
   assert.equal(calls.unsubscribed.includes(currentId), false)
   current.resolve({paid: true})
   await currentCheck
-  assert.equal(app.paymentState, 'paid')
-  assert.equal(app.invoice.amount, 2)
+  assert.equal(app.paymentState, 'idle')
+  assert.equal(app.invoiceDialog, false)
+  assert.equal(app.invoice, null, 'no attempt state survives a completed payment')
 })
 
 test('unmount invalidates receipt checks and clears polling/request timeouts', async () => {

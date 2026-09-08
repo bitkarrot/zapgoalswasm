@@ -46,3 +46,32 @@ Never deploy/restart or generate bindings as part of this backend task. Parent o
 ## Stock invoice metadata ABI correction
 
 `create-invoice-public-request` MUST use `extra: list<tuple<string,string>>`, not `extra-json`. The stock runtime explicitly converts native extra lists to a dict; `CreateInvoicePublicRequest` has no `parse_extra_json` alias and silently ignores that unknown field. All metadata is string-valued, including decimal sats in `amount`; the settlement verifier parses that decimal string and still compares actual msats against the private integer issuance amount. `issueId` remains private and only goes into this native extra metadata, not response or memo. Regression: `tests/backend/stock_invoice_abi.py` executes the actual local stock conversion/model and passed. No host modification is needed.
+
+## Manual sweep permissions (v0.5.0)
+
+Add both plain permissions (verified against the stock host's method registry;
+they are not policy-aware):
+
+```json
+{"id": "wallet.create_invoice", "description": "Create internal sweep invoices on the user's target wallet"},
+{"id": "wallet.pay_invoice", "description": "Pay sweep invoices from the goal's receiving wallet"}
+```
+
+The stock host enforces wallet ownership for both: `wallet.user == user_id` for
+the authenticated invocation, so a sweep can only create an invoice on a wallet
+the owner already controls and pay from the goal's own wallet. New WIT imports
+(mirroring the host's pydantic models, extra as native string pairs):
+
+```
+record create-invoice-request { wallet-id: string, amount: f64, currency: string, memo: string, tag: string, extra: list<tuple<string, string>> }
+create-invoice: func(req: create-invoice-request) -> create-invoice-response;
+record pay-invoice-request { wallet-id: string, payment-request: string, max-sat: option<u64>, description: string, extra: list<tuple<string, string>> }
+record pay-invoice-response { ok: bool, error: option<string>, checking-id: option<string>, payment-hash: option<string>, status: option<string>, amount-msat: s64, fee-msat: s64, pending: bool, success: bool }
+pay-invoice: func(req: pay-invoice-request) -> pay-invoice-response;
+```
+
+Migration 006 adds the private `sweeps` ledger (marker rows keyed
+`sweep:{goalId}:{closedPeriods}`; attempt nonce, amount, target, payment hash,
+status). `sweep-goal` is now the owner-only transfer action; `list-periods`
+and `sweep-due` stay read-only. Sweep target-invoice settlement events carry
+sweep metadata but no issuance binding, so `on-invoice-paid` quarantines them.

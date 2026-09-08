@@ -767,27 +767,223 @@ fn all_views_and_sweeps_share_projection_and_never_mutate_inputs() {
     let mut goal = recurring_goal();
     goal["periodStartDate"] = json!("2025-01-01T02:00:00+02:00");
     goal["periodEndDate"] = json!("2025-01-31T14:00:00+02:00");
+    goal["targetWalletId"] = json!(host::TARGET);
     host::seed("goals", goal.clone());
     host::state(|s| {
         s.timestamp = accounting::parse_timestamp(&json!("2025-02-01T00:00:00Z")).unwrap()
     });
     let before = host::state(|s| s.rows.clone());
-    let result = decode(Component::sweep_goal(
-        json!({"goalId":"goal-a"}).to_string(),
-    ));
-    assert_eq!(result["readOnly"], true);
-    assert_eq!(result["totals"]["movedAmount"], 1000);
-    assert_eq!(result["goal"]["currentAmount"], 500);
-    assert_eq!(result["goal"]["periodEndDate"], "2025-02-28T12:00:00Z");
+    // Read-only views never mutate; the sweep ACTION is covered separately.
     let periods = decode(Component::list_periods(
         json!({"goalId":"goal-a"}).to_string(),
     ));
-    assert_eq!(periods["data"], result["data"]);
+    assert_eq!(periods["totals"]["movedAmount"], 1000);
+    assert_eq!(periods["totals"]["currentAmount"], 500);
     assert_eq!(periods["data"][0]["retainedAmount"], 0);
     assert_eq!(decode(Component::sweep_due("{}".into()))["totalSwept"], 0);
     assert_eq!(derived_total(), 500);
     assert_eq!(host::state(|s| s.rows.clone()), before);
     assert!(host::state(|s| s.writes.is_empty()));
+    assert!(host::state(|s| s.sweep_invoices.is_empty()));
+    assert!(host::state(|s| s.sweep_payments.is_empty()));
+}
+
+fn sweepable_goal() -> Value {
+    let mut goal = recurring_goal();
+    goal["targetWalletId"] = json!(host::TARGET);
+    goal["periodStartDate"] = json!("2025-01-01T00:00:00Z");
+    goal["periodEndDate"] = json!("2025-01-31T12:00:00Z");
+    host::seed("goals", goal.clone());
+    host::state(|s| {
+        s.timestamp = accounting::parse_timestamp(&json!("2025-02-01T00:00:00Z")).unwrap()
+    });
+    goal
+}
+fn sweep() -> Value {
+    decode(Component::sweep_goal(json!({"goalId":"goal-a"}).to_string()))
+}
+#[test]
+fn manual_sweep_transfers_allocated_sats_to_target_wallet_exactly_once() {
+    sweepable_goal();
+    let result = sweep();
+    assert_eq!(result["swept"], true, "{result}");
+    assert_eq!(result["amount"], 1000);
+    assert_eq!(result["sweptAmount"], 1000);
+    assert_eq!(result["closedPeriods"], 1);
+    // One internal invoice on the owner's target wallet, paid from the goal
+    // wallet with the allocated amount as an exact maximum.
+    let (invoice, payment) = host::state(|s| {
+        (
+            s.sweep_invoices.last().cloned(),
+            s.sweep_payments.last().cloned(),
+        )
+    });
+    let invoice = invoice.unwrap();
+    assert_eq!(invoice.wallet_id, host::TARGET);
+    assert_eq!(invoice.amount, 1000.0);
+    assert_eq!(invoice.tag, "zapgoalswasm");
+    assert!(invoice.extra.iter().any(|(k, v)| k == "goalId" && v == "goal-a"));
+    assert!(invoice.extra.iter().any(|(k, v)| k == "sweepId" && v == "sweep:goal-a:1"));
+    let payment = payment.unwrap();
+    assert_eq!(payment.wallet_id, host::WALLET);
+    assert_eq!(payment.max_sat, Some(1000));
+    // The durable marker records completion.
+    let marker = host::row("sweeps", "sweep:goal-a:1").unwrap();
+    assert_eq!(marker["status"], "completed");
+    assert_eq!(marker["amount"], 1000);
+    assert_eq!(marker["goalId"], "goal-a");
+    assert_eq!(marker["paymentHash"], result["paymentHash"]);
+    // A repeated sweep at the same accounting state is an idempotent no-op.
+    let duplicate = sweep();
+    assert_eq!(duplicate["swept"], false, "{duplicate}");
+    assert_eq!(duplicate["available"], 0);
+    assert_eq!(host::state(|s| s.sweep_payments.len()), 1);
+    // When a late payment raises the allocation but the covered marker is
+    // already completed, the duplicate marker blocks a second transfer of the
+    // same period range; only a NEW period count unlocks the difference.
+    let mut marker = host::row("sweeps", "sweep:goal-a:1").unwrap();
+    marker["amount"] = json!(400);
+    host::seed("sweeps", marker);
+    let revised = sweep();
+    assert_eq!(revised["swept"], false, "{revised}");
+    assert_eq!(revised["duplicate"], true);
+    assert_eq!(revised["amount"], 400);
+    assert_eq!(host::state(|s| s.sweep_payments.len()), 1);
+    // Sweeps never credit goal progress or write receipts.
+    assert!(host::row("payment_events", host::HASH).is_none());
+    assert_eq!(derived_total(), 500);
+}
+#[test]
+fn sweep_settlement_events_are_quarantined_and_never_credit_progress() {
+    sweepable_goal();
+    let result = sweep();
+    let hash = result["paymentHash"].as_str().unwrap().to_string();
+    // The target invoice settles into the target wallet; its event must be
+    // quarantined even though the extra metadata names the goal.
+    let event = json!({"walletId": host::TARGET, "pending": false, "status": "success",
+        "paymentHash": hash, "amount": 1000000,
+        "extra": {"extra_zapgoalswasm": {"goalId": "goal-a", "sweepId": "sweep:goal-a:1", "source": "sweep_target"}}});
+    assert_eq!(deliver(event)["quarantined"], true);
+    // A forged event claiming the goal's own wallet is also quarantined: the
+    // sweep invoice has no private issuance binding.
+    let forged = json!({"walletId": host::WALLET, "pending": false, "status": "success",
+        "paymentHash": hash, "amount": 1000000,
+        "extra": {"extra_zapgoalswasm": {"goalId": "goal-a", "sweepId": "sweep:goal-a:1", "source": "sweep_target"}}});
+    assert_eq!(deliver(forged)["quarantined"], true);
+    assert!(host::row("payment_events", &hash).is_none());
+    assert_eq!(derived_total(), 500);
+    assert_eq!(status("goal-a", &hash), json!({"paid": false}));
+}
+#[test]
+fn pending_marker_blocks_and_failed_marker_retries_without_double_payment() {
+    sweepable_goal();
+    host::seed("sweeps", json!({"id": "sweep:goal-a:1", "goalId": "goal-a", "attempt": "other",
+        "periodCount": 1, "amount": 1000, "targetWalletId": host::TARGET, "paymentHash": "",
+        "checkingId": "", "status": "pending", "error": "", "createdAt": "1", "completedAt": ""}));
+    let blocked = sweep();
+    assert!(blocked.get("error").is_some(), "{blocked}");
+    assert!(blocked["error"]
+        .as_str()
+        .unwrap()
+        .contains("already in progress"));
+    assert!(host::state(|s| s.sweep_invoices.is_empty()));
+    assert!(host::state(|s| s.sweep_payments.is_empty()));
+    // A failed marker (no payment happened) is retryable and pays exactly once.
+    let mut failed = host::row("sweeps", "sweep:goal-a:1").unwrap();
+    failed["status"] = json!("failed");
+    failed["error"] = json!("previous attempt failed");
+    host::seed("sweeps", failed);
+    let retried = sweep();
+    assert_eq!(retried["swept"], true, "{retried}");
+    assert_eq!(host::state(|s| s.sweep_payments.len()), 1);
+    assert_eq!(host::row("sweeps", "sweep:goal-a:1").unwrap()["status"], "completed");
+}
+#[test]
+fn sweep_fails_closed_on_payment_error_and_records_the_failure() {
+    sweepable_goal();
+    host::state(|s| s.fail_pay = true);
+    let failed = sweep();
+    assert!(failed.get("error").is_some(), "{failed}");
+    assert!(failed["error"].as_str().unwrap().contains("Insufficient balance"));
+    let marker = host::row("sweeps", "sweep:goal-a:1").unwrap();
+    assert_eq!(marker["status"], "failed");
+    assert!(marker["error"].as_str().unwrap().contains("Insufficient balance"));
+    // Retry after the wallet is funded pays exactly once.
+    host::state(|s| s.fail_pay = false);
+    let retried = sweep();
+    assert_eq!(retried["swept"], true, "{retried}");
+    assert_eq!(host::state(|s| s.sweep_payments.len()), 1);
+    assert_eq!(host::row("sweeps", "sweep:goal-a:1").unwrap()["status"], "completed");
+}
+#[test]
+fn sweep_validates_target_wallet_and_available_allocation_before_any_wallet_call() {
+    // No target wallet configured.
+    sweepable_goal();
+    let mut goal = host::row("goals", "goal-a").unwrap();
+    goal["targetWalletId"] = json!("");
+    host::seed("goals", goal);
+    assert!(sweep().get("error").is_some());
+    // Target equal to the goal's own wallet.
+    let mut goal = host::row("goals", "goal-a").unwrap();
+    goal["targetWalletId"] = json!(host::WALLET);
+    host::seed("goals", goal);
+    assert!(sweep().get("error").is_some());
+    // Target wallet not owned by the user.
+    let mut goal = host::row("goals", "goal-a").unwrap();
+    goal["targetWalletId"] = json!("attacker-wallet");
+    host::seed("goals", goal);
+    assert!(sweep().get("error").is_some());
+    // Non-recurring goals are not sweepable.
+    let mut goal = host::row("goals", "goal-a").unwrap();
+    goal["targetWalletId"] = json!(host::TARGET);
+    goal["recurring"] = json!(false);
+    host::seed("goals", goal);
+    let result = sweep();
+    assert!(result.get("error").is_some());
+    // Archived goals are not sweepable.
+    let mut goal = host::row("goals", "goal-a").unwrap();
+    goal["recurring"] = json!(true);
+    goal["archived"] = json!(true);
+    host::seed("goals", goal);
+    assert!(sweep().get("error").is_some());
+    // Nothing allocated yet: the active period has not closed.
+    let mut goal = host::row("goals", "goal-a").unwrap();
+    goal["archived"] = json!(false);
+    goal["periodStartDate"] = json!("2025-02-01T00:00:00Z");
+    goal["periodEndDate"] = json!("2025-03-01T00:00:00Z");
+    host::seed("goals", goal);
+    let nothing = sweep();
+    assert_eq!(nothing["swept"], false, "{nothing}");
+    assert_eq!(nothing["available"], 0);
+    assert!(host::state(|s| s.sweep_invoices.is_empty()));
+    assert!(host::state(|s| s.sweep_payments.is_empty()));
+    assert!(host::state(|s| s.writes.iter().all(|(table, _)| table != "goals")));
+}
+#[test]
+fn later_periods_add_new_allocation_and_sweep_transfers_only_the_difference() {
+    sweepable_goal();
+    assert_eq!(sweep()["amount"], 1000);
+    // The next monthly period closes with no new receipts; its 500-sat carry
+    // is allocated again, so only the difference is transferable.
+    host::state(|s| {
+        s.timestamp = accounting::parse_timestamp(&json!("2025-03-01T00:00:00Z")).unwrap()
+    });
+    let second = sweep();
+    assert_eq!(second["swept"], true, "{second}");
+    assert_eq!(second["amount"], 500);
+    assert_eq!(second["closedPeriods"], 2);
+    assert_eq!(second["sweptAmount"], 1500);
+    assert_eq!(host::state(|s| s.sweep_payments.len()), 2);
+    let marker = host::row("sweeps", "sweep:goal-a:2").unwrap();
+    assert_eq!(marker["amount"], 500);
+    assert_eq!(marker["status"], "completed");
+    // Totals still conserve; goal accounting inputs were never mutated.
+    let totals = decode(Component::list_periods(
+        json!({"goalId":"goal-a"}).to_string(),
+    ))["totals"]
+        .clone();
+    assert_eq!(totals["movedAmount"], 1500);
+    assert_eq!(totals["currentAmount"], 0);
 }
 #[test]
 fn partial_presentation_update_preserves_opening_schedule_private_fields_and_receipts() {

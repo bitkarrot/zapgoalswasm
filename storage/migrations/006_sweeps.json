@@ -1,0 +1,63 @@
+{
+  "operations": [
+    {
+      "op": "create_table",
+      "table": "sweeps",
+      "fields": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "goalId",
+          "type": "string"
+        },
+        {
+          "name": "attempt",
+          "type": "string"
+        },
+        {
+          "name": "periodCount",
+          "type": "integer"
+        },
+        {
+          "name": "amount",
+          "type": "integer"
+        },
+        {
+          "name": "targetWalletId",
+          "type": "string"
+        },
+        {
+          "name": "paymentHash",
+          "type": "string",
+          "default": ""
+        },
+        {
+          "name": "checkingId",
+          "type": "string",
+          "default": ""
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "default": "pending"
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "default": ""
+        },
+        {
+          "name": "createdAt",
+          "type": "string"
+        },
+        {
+          "name": "completedAt",
+          "type": "string",
+          "default": ""
+        }
+      ]
+    }
+  ]
+}

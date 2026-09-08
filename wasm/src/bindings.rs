@@ -649,6 +649,82 @@ pub mod lnbits {
                 }
             }
             #[derive(Clone)]
+            pub struct CreateInvoiceRequest {
+                pub wallet_id: _rt::String,
+                pub amount: f64,
+                pub currency: _rt::String,
+                pub memo: _rt::String,
+                pub tag: _rt::String,
+                pub extra: _rt::Vec<(_rt::String, _rt::String)>,
+            }
+            impl ::core::fmt::Debug for CreateInvoiceRequest {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("CreateInvoiceRequest")
+                        .field("wallet-id", &self.wallet_id)
+                        .field("amount", &self.amount)
+                        .field("currency", &self.currency)
+                        .field("memo", &self.memo)
+                        .field("tag", &self.tag)
+                        .field("extra", &self.extra)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub struct PayInvoiceRequest {
+                pub wallet_id: _rt::String,
+                pub payment_request: _rt::String,
+                pub max_sat: Option<u64>,
+                pub description: _rt::String,
+                pub extra: _rt::Vec<(_rt::String, _rt::String)>,
+            }
+            impl ::core::fmt::Debug for PayInvoiceRequest {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("PayInvoiceRequest")
+                        .field("wallet-id", &self.wallet_id)
+                        .field("payment-request", &self.payment_request)
+                        .field("max-sat", &self.max_sat)
+                        .field("description", &self.description)
+                        .field("extra", &self.extra)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub struct PayInvoiceResponse {
+                pub ok: bool,
+                pub error: Option<_rt::String>,
+                pub checking_id: Option<_rt::String>,
+                pub payment_hash: Option<_rt::String>,
+                pub status: Option<_rt::String>,
+                pub amount_msat: i64,
+                pub fee_msat: i64,
+                pub pending: bool,
+                pub success: bool,
+            }
+            impl ::core::fmt::Debug for PayInvoiceResponse {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("PayInvoiceResponse")
+                        .field("ok", &self.ok)
+                        .field("error", &self.error)
+                        .field("checking-id", &self.checking_id)
+                        .field("payment-hash", &self.payment_hash)
+                        .field("status", &self.status)
+                        .field("amount-msat", &self.amount_msat)
+                        .field("fee-msat", &self.fee_msat)
+                        .field("pending", &self.pending)
+                        .field("success", &self.success)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
             pub struct WalletSummary {
                 pub id: _rt::String,
                 pub name: _rt::String,
@@ -1548,6 +1624,415 @@ pub mod lnbits {
                 }
             }
             #[allow(unused_unsafe, clippy::all)]
+            pub fn create_invoice(req: &CreateInvoiceRequest) -> CreateInvoiceResponse {
+                unsafe {
+                    #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
+                    #[cfg_attr(target_pointer_width = "32", repr(align(4)))]
+                    struct RetArea(
+                        [::core::mem::MaybeUninit<
+                            u8,
+                        >; 6 * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let mut ret_area = RetArea(
+                        [::core::mem::MaybeUninit::uninit(); 6
+                            * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let CreateInvoiceRequest {
+                        wallet_id: wallet_id0,
+                        amount: amount0,
+                        currency: currency0,
+                        memo: memo0,
+                        tag: tag0,
+                        extra: extra0,
+                    } = req;
+                    let vec1 = wallet_id0;
+                    let ptr1 = vec1.as_ptr().cast::<u8>();
+                    let len1 = vec1.len();
+                    let vec2 = currency0;
+                    let ptr2 = vec2.as_ptr().cast::<u8>();
+                    let len2 = vec2.len();
+                    let vec3 = memo0;
+                    let ptr3 = vec3.as_ptr().cast::<u8>();
+                    let len3 = vec3.len();
+                    let vec4 = tag0;
+                    let ptr4 = vec4.as_ptr().cast::<u8>();
+                    let len4 = vec4.len();
+                    let vec8 = extra0;
+                    let len8 = vec8.len();
+                    let layout8 = _rt::alloc::Layout::from_size_align_unchecked(
+                        vec8.len() * (4 * ::core::mem::size_of::<*const u8>()),
+                        ::core::mem::size_of::<*const u8>(),
+                    );
+                    let result8 = if layout8.size() != 0 {
+                        let ptr = _rt::alloc::alloc(layout8).cast::<u8>();
+                        if ptr.is_null() {
+                            _rt::alloc::handle_alloc_error(layout8);
+                        }
+                        ptr
+                    } else {
+                        ::core::ptr::null_mut()
+                    };
+                    for (i, e) in vec8.into_iter().enumerate() {
+                        let base = result8
+                            .add(i * (4 * ::core::mem::size_of::<*const u8>()));
+                        {
+                            let (t5_0, t5_1) = e;
+                            let vec6 = t5_0;
+                            let ptr6 = vec6.as_ptr().cast::<u8>();
+                            let len6 = vec6.len();
+                            *base
+                                .add(::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len6;
+                            *base.add(0).cast::<*mut u8>() = ptr6.cast_mut();
+                            let vec7 = t5_1;
+                            let ptr7 = vec7.as_ptr().cast::<u8>();
+                            let len7 = vec7.len();
+                            *base
+                                .add(3 * ::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len7;
+                            *base
+                                .add(2 * ::core::mem::size_of::<*const u8>())
+                                .cast::<*mut u8>() = ptr7.cast_mut();
+                        }
+                    }
+                    let ptr9 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "lnbits:extension/host")]
+                    unsafe extern "C" {
+                        #[link_name = "create-invoice"]
+                        fn wit_import10(
+                            _: *mut u8,
+                            _: usize,
+                            _: f64,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                        );
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    unsafe extern "C" fn wit_import10(
+                        _: *mut u8,
+                        _: usize,
+                        _: f64,
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                    ) {
+                        unreachable!()
+                    }
+                    unsafe {
+                        wit_import10(
+                            ptr1.cast_mut(),
+                            len1,
+                            _rt::as_f64(amount0),
+                            ptr2.cast_mut(),
+                            len2,
+                            ptr3.cast_mut(),
+                            len3,
+                            ptr4.cast_mut(),
+                            len4,
+                            result8,
+                            len8,
+                            ptr9,
+                        )
+                    };
+                    let l11 = *ptr9.add(0).cast::<*mut u8>();
+                    let l12 = *ptr9
+                        .add(::core::mem::size_of::<*const u8>())
+                        .cast::<usize>();
+                    let len13 = l12;
+                    let bytes13 = _rt::Vec::from_raw_parts(l11.cast(), len13, len13);
+                    let l14 = *ptr9
+                        .add(2 * ::core::mem::size_of::<*const u8>())
+                        .cast::<*mut u8>();
+                    let l15 = *ptr9
+                        .add(3 * ::core::mem::size_of::<*const u8>())
+                        .cast::<usize>();
+                    let len16 = l15;
+                    let bytes16 = _rt::Vec::from_raw_parts(l14.cast(), len16, len16);
+                    let l17 = *ptr9
+                        .add(4 * ::core::mem::size_of::<*const u8>())
+                        .cast::<*mut u8>();
+                    let l18 = *ptr9
+                        .add(5 * ::core::mem::size_of::<*const u8>())
+                        .cast::<usize>();
+                    let len19 = l18;
+                    let bytes19 = _rt::Vec::from_raw_parts(l17.cast(), len19, len19);
+                    let result20 = CreateInvoiceResponse {
+                        payment_hash: _rt::string_lift(bytes13),
+                        payment_request: _rt::string_lift(bytes16),
+                        checking_id: _rt::string_lift(bytes19),
+                    };
+                    if layout8.size() != 0 {
+                        _rt::alloc::dealloc(result8.cast(), layout8);
+                    }
+                    result20
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
+            pub fn pay_invoice(req: &PayInvoiceRequest) -> PayInvoiceResponse {
+                unsafe {
+                    #[repr(align(8))]
+                    struct RetArea(
+                        [::core::mem::MaybeUninit<
+                            u8,
+                        >; 32 + 12 * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let mut ret_area = RetArea(
+                        [::core::mem::MaybeUninit::uninit(); 32
+                            + 12 * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let PayInvoiceRequest {
+                        wallet_id: wallet_id0,
+                        payment_request: payment_request0,
+                        max_sat: max_sat0,
+                        description: description0,
+                        extra: extra0,
+                    } = req;
+                    let vec1 = wallet_id0;
+                    let ptr1 = vec1.as_ptr().cast::<u8>();
+                    let len1 = vec1.len();
+                    let vec2 = payment_request0;
+                    let ptr2 = vec2.as_ptr().cast::<u8>();
+                    let len2 = vec2.len();
+                    let (result3_0, result3_1) = match max_sat0 {
+                        Some(e) => (1i32, _rt::as_i64(e)),
+                        None => (0i32, 0i64),
+                    };
+                    let vec4 = description0;
+                    let ptr4 = vec4.as_ptr().cast::<u8>();
+                    let len4 = vec4.len();
+                    let vec8 = extra0;
+                    let len8 = vec8.len();
+                    let layout8 = _rt::alloc::Layout::from_size_align_unchecked(
+                        vec8.len() * (4 * ::core::mem::size_of::<*const u8>()),
+                        ::core::mem::size_of::<*const u8>(),
+                    );
+                    let result8 = if layout8.size() != 0 {
+                        let ptr = _rt::alloc::alloc(layout8).cast::<u8>();
+                        if ptr.is_null() {
+                            _rt::alloc::handle_alloc_error(layout8);
+                        }
+                        ptr
+                    } else {
+                        ::core::ptr::null_mut()
+                    };
+                    for (i, e) in vec8.into_iter().enumerate() {
+                        let base = result8
+                            .add(i * (4 * ::core::mem::size_of::<*const u8>()));
+                        {
+                            let (t5_0, t5_1) = e;
+                            let vec6 = t5_0;
+                            let ptr6 = vec6.as_ptr().cast::<u8>();
+                            let len6 = vec6.len();
+                            *base
+                                .add(::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len6;
+                            *base.add(0).cast::<*mut u8>() = ptr6.cast_mut();
+                            let vec7 = t5_1;
+                            let ptr7 = vec7.as_ptr().cast::<u8>();
+                            let len7 = vec7.len();
+                            *base
+                                .add(3 * ::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len7;
+                            *base
+                                .add(2 * ::core::mem::size_of::<*const u8>())
+                                .cast::<*mut u8>() = ptr7.cast_mut();
+                        }
+                    }
+                    let ptr9 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "lnbits:extension/host")]
+                    unsafe extern "C" {
+                        #[link_name = "pay-invoice"]
+                        fn wit_import10(
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                            _: usize,
+                            _: i32,
+                            _: i64,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                        );
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    unsafe extern "C" fn wit_import10(
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                        _: usize,
+                        _: i32,
+                        _: i64,
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                    ) {
+                        unreachable!()
+                    }
+                    unsafe {
+                        wit_import10(
+                            ptr1.cast_mut(),
+                            len1,
+                            ptr2.cast_mut(),
+                            len2,
+                            result3_0,
+                            result3_1,
+                            ptr4.cast_mut(),
+                            len4,
+                            result8,
+                            len8,
+                            ptr9,
+                        )
+                    };
+                    let l11 = i32::from(*ptr9.add(0).cast::<u8>());
+                    let l12 = i32::from(
+                        *ptr9.add(::core::mem::size_of::<*const u8>()).cast::<u8>(),
+                    );
+                    let l16 = i32::from(
+                        *ptr9.add(4 * ::core::mem::size_of::<*const u8>()).cast::<u8>(),
+                    );
+                    let l20 = i32::from(
+                        *ptr9.add(7 * ::core::mem::size_of::<*const u8>()).cast::<u8>(),
+                    );
+                    let l24 = i32::from(
+                        *ptr9.add(10 * ::core::mem::size_of::<*const u8>()).cast::<u8>(),
+                    );
+                    let l28 = *ptr9
+                        .add(8 + 12 * ::core::mem::size_of::<*const u8>())
+                        .cast::<i64>();
+                    let l29 = *ptr9
+                        .add(16 + 12 * ::core::mem::size_of::<*const u8>())
+                        .cast::<i64>();
+                    let l30 = i32::from(
+                        *ptr9
+                            .add(24 + 12 * ::core::mem::size_of::<*const u8>())
+                            .cast::<u8>(),
+                    );
+                    let l31 = i32::from(
+                        *ptr9
+                            .add(25 + 12 * ::core::mem::size_of::<*const u8>())
+                            .cast::<u8>(),
+                    );
+                    let result32 = PayInvoiceResponse {
+                        ok: _rt::bool_lift(l11 as u8),
+                        error: match l12 {
+                            0 => None,
+                            1 => {
+                                let e = {
+                                    let l13 = *ptr9
+                                        .add(2 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<*mut u8>();
+                                    let l14 = *ptr9
+                                        .add(3 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<usize>();
+                                    let len15 = l14;
+                                    let bytes15 = _rt::Vec::from_raw_parts(
+                                        l13.cast(),
+                                        len15,
+                                        len15,
+                                    );
+                                    _rt::string_lift(bytes15)
+                                };
+                                Some(e)
+                            }
+                            _ => _rt::invalid_enum_discriminant(),
+                        },
+                        checking_id: match l16 {
+                            0 => None,
+                            1 => {
+                                let e = {
+                                    let l17 = *ptr9
+                                        .add(5 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<*mut u8>();
+                                    let l18 = *ptr9
+                                        .add(6 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<usize>();
+                                    let len19 = l18;
+                                    let bytes19 = _rt::Vec::from_raw_parts(
+                                        l17.cast(),
+                                        len19,
+                                        len19,
+                                    );
+                                    _rt::string_lift(bytes19)
+                                };
+                                Some(e)
+                            }
+                            _ => _rt::invalid_enum_discriminant(),
+                        },
+                        payment_hash: match l20 {
+                            0 => None,
+                            1 => {
+                                let e = {
+                                    let l21 = *ptr9
+                                        .add(8 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<*mut u8>();
+                                    let l22 = *ptr9
+                                        .add(9 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<usize>();
+                                    let len23 = l22;
+                                    let bytes23 = _rt::Vec::from_raw_parts(
+                                        l21.cast(),
+                                        len23,
+                                        len23,
+                                    );
+                                    _rt::string_lift(bytes23)
+                                };
+                                Some(e)
+                            }
+                            _ => _rt::invalid_enum_discriminant(),
+                        },
+                        status: match l24 {
+                            0 => None,
+                            1 => {
+                                let e = {
+                                    let l25 = *ptr9
+                                        .add(11 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<*mut u8>();
+                                    let l26 = *ptr9
+                                        .add(12 * ::core::mem::size_of::<*const u8>())
+                                        .cast::<usize>();
+                                    let len27 = l26;
+                                    let bytes27 = _rt::Vec::from_raw_parts(
+                                        l25.cast(),
+                                        len27,
+                                        len27,
+                                    );
+                                    _rt::string_lift(bytes27)
+                                };
+                                Some(e)
+                            }
+                            _ => _rt::invalid_enum_discriminant(),
+                        },
+                        amount_msat: l28,
+                        fee_msat: l29,
+                        pending: _rt::bool_lift(l30 as u8),
+                        success: _rt::bool_lift(l31 as u8),
+                    };
+                    if layout8.size() != 0 {
+                        _rt::alloc::dealloc(result8.cast(), layout8);
+                    }
+                    result32
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
             pub fn list_user_wallets() -> ListWalletsResponse {
                 unsafe {
                     #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
@@ -1858,6 +2343,23 @@ mod _rt {
         }
     }
     pub use alloc_crate::alloc;
+    pub fn as_f64<T: AsF64>(t: T) -> f64 {
+        t.as_f64()
+    }
+    pub trait AsF64 {
+        fn as_f64(self) -> f64;
+    }
+    impl<'a, T: Copy + AsF64> AsF64 for &'a T {
+        fn as_f64(self) -> f64 {
+            (*self).as_f64()
+        }
+    }
+    impl AsF64 for f64 {
+        #[inline]
+        fn as_f64(self) -> f64 {
+            self as f64
+        }
+    }
     pub unsafe fn cabi_dealloc(ptr: *mut u8, size: usize, align: usize) {
         if size == 0 {
             return;
@@ -1906,9 +2408,9 @@ pub(crate) use __export_zapgoals_impl as export;
 )]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1867] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xcc\x0d\x01A\x02\x01\
-A\x0f\x01BF\x01r\x02\x05tables\x02ids\x04\0\x13storage-get-request\x03\0\0\x01ks\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 2204] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x9d\x10\x01A\x02\x01\
+A\x0f\x01BQ\x01r\x02\x05tables\x02ids\x04\0\x13storage-get-request\x03\0\0\x01ks\
 \x01r\x01\x09data-json\x02\x04\0\x14storage-get-response\x03\0\x03\x01r\x02\x05t\
 ables\x02ids\x04\0\x1astorage-get-public-request\x03\0\x05\x01r\x03\x05tables\x09\
 source-ids\x09data-json\x02\x04\0\x1dstorage-append-public-request\x03\0\x07\x01\
@@ -1924,27 +2426,34 @@ search\x02\x12search-fields-json\x02\x07sort-by\x02\x0adescending\x7f\x05limity\
 offsety\x04\0\x20storage-public-paginated-request\x03\0\x17\x01o\x02ss\x01p\x19\x01\
 r\x05\x09source-ids\x06amountw\x08currencys\x04memos\x05extra\x1a\x04\0\x1dcreat\
 e-invoice-public-request\x03\0\x1b\x01r\x03\x0cpayment-hashs\x0fpayment-requests\
-\x0bchecking-ids\x04\0\x17create-invoice-response\x03\0\x1d\x01r\x03\x02ids\x04n\
-ames\x08currency\x02\x04\0\x0ewallet-summary\x03\0\x1f\x01p\x20\x01r\x01\x07wall\
-ets!\x04\0\x15list-wallets-response\x03\0\"\x01r\x01\x09timestampw\x04\0\x0cnow-\
-response\x03\0$\x01r\x01\x06prefixs\x04\0\x11random-id-request\x03\0&\x01r\x01\x02\
-ids\x04\0\x12random-id-response\x03\0(\x01r\x02\x05levels\x07messages\x04\0\x0bl\
-og-request\x03\0*\x01r\x01\x02ok\x7f\x04\0\x0clog-response\x03\0,\x01@\x01\x03re\
-q\x01\0\x04\x04\0\x0bstorage-get\x01.\x01@\x01\x03req\x06\0\x04\x04\0\x12storage\
--get-public\x01/\x01@\x01\x03req\x08\0\x0a\x04\0\x15storage-append-public\x010\x01\
-@\x01\x03req\x0c\0\x0e\x04\0\x0bstorage-set\x011\x01@\x01\x03req\x10\0\x12\x04\0\
-\x0estorage-delete\x012\x01@\x01\x03req\x14\0\x16\x04\0\x15storage-get-paginated\
-\x013\x01@\x01\x03req\x18\0\x16\x04\0\x1cstorage-get-public-paginated\x014\x01@\x01\
-\x03req\x1c\0\x1e\x04\0\x15create-invoice-public\x015\x01@\0\0#\x04\0\x11list-us\
-er-wallets\x016\x01@\0\0%\x04\0\x03now\x017\x01@\x01\x03req'\0)\x04\0\x09random-\
-id\x018\x01@\x01\x03req+\0-\x04\0\x03log\x019\x03\0\x15lnbits:extension/host\x05\
-\0\x01@\x01\x07payloads\0s\x04\0\x0bcreate-goal\x01\x01\x04\0\x0alist-goals\x01\x01\
-\x04\0\x0bget-wallets\x01\x01\x04\0\x0bupdate-goal\x01\x01\x04\0\x0bdelete-goal\x01\
-\x01\x04\0\x0fget-public-goal\x01\x01\x04\0\x0ecreate-invoice\x01\x01\x04\0\x0ei\
-nvoice-status\x01\x01\x04\0\x0fon-invoice-paid\x01\x01\x04\0\x0asweep-goal\x01\x01\
-\x04\0\x0clist-periods\x01\x01\x04\0\x09sweep-due\x01\x01\x04\0\x19lnbits:extens\
-ion/zapgoals\x04\0\x0b\x0e\x01\0\x08zapgoals\x03\0\0\0G\x09producers\x01\x0cproc\
-essed-by\x02\x0dwit-component\x070.227.1\x10wit-bindgen-rust\x060.41.0";
+\x0bchecking-ids\x04\0\x17create-invoice-response\x03\0\x1d\x01r\x06\x09wallet-i\
+ds\x06amountu\x08currencys\x04memos\x03tags\x05extra\x1a\x04\0\x16create-invoice\
+-request\x03\0\x1f\x01kw\x01r\x05\x09wallet-ids\x0fpayment-requests\x07max-sat!\x0b\
+descriptions\x05extra\x1a\x04\0\x13pay-invoice-request\x03\0\"\x01r\x09\x02ok\x7f\
+\x05error\x02\x0bchecking-id\x02\x0cpayment-hash\x02\x06status\x02\x0bamount-msa\
+tx\x08fee-msatx\x07pending\x7f\x07success\x7f\x04\0\x14pay-invoice-response\x03\0\
+$\x01r\x03\x02ids\x04names\x08currency\x02\x04\0\x0ewallet-summary\x03\0&\x01p'\x01\
+r\x01\x07wallets(\x04\0\x15list-wallets-response\x03\0)\x01r\x01\x09timestampw\x04\
+\0\x0cnow-response\x03\0+\x01r\x01\x06prefixs\x04\0\x11random-id-request\x03\0-\x01\
+r\x01\x02ids\x04\0\x12random-id-response\x03\0/\x01r\x02\x05levels\x07messages\x04\
+\0\x0blog-request\x03\01\x01r\x01\x02ok\x7f\x04\0\x0clog-response\x03\03\x01@\x01\
+\x03req\x01\0\x04\x04\0\x0bstorage-get\x015\x01@\x01\x03req\x06\0\x04\x04\0\x12s\
+torage-get-public\x016\x01@\x01\x03req\x08\0\x0a\x04\0\x15storage-append-public\x01\
+7\x01@\x01\x03req\x0c\0\x0e\x04\0\x0bstorage-set\x018\x01@\x01\x03req\x10\0\x12\x04\
+\0\x0estorage-delete\x019\x01@\x01\x03req\x14\0\x16\x04\0\x15storage-get-paginat\
+ed\x01:\x01@\x01\x03req\x18\0\x16\x04\0\x1cstorage-get-public-paginated\x01;\x01\
+@\x01\x03req\x1c\0\x1e\x04\0\x15create-invoice-public\x01<\x01@\x01\x03req\x20\0\
+\x1e\x04\0\x0ecreate-invoice\x01=\x01@\x01\x03req#\0%\x04\0\x0bpay-invoice\x01>\x01\
+@\0\0*\x04\0\x11list-user-wallets\x01?\x01@\0\0,\x04\0\x03now\x01@\x01@\x01\x03r\
+eq.\00\x04\0\x09random-id\x01A\x01@\x01\x03req2\04\x04\0\x03log\x01B\x03\0\x15ln\
+bits:extension/host\x05\0\x01@\x01\x07payloads\0s\x04\0\x0bcreate-goal\x01\x01\x04\
+\0\x0alist-goals\x01\x01\x04\0\x0bget-wallets\x01\x01\x04\0\x0bupdate-goal\x01\x01\
+\x04\0\x0bdelete-goal\x01\x01\x04\0\x0fget-public-goal\x01\x01\x04\0\x0ecreate-i\
+nvoice\x01\x01\x04\0\x0einvoice-status\x01\x01\x04\0\x0fon-invoice-paid\x01\x01\x04\
+\0\x0asweep-goal\x01\x01\x04\0\x0clist-periods\x01\x01\x04\0\x09sweep-due\x01\x01\
+\x04\0\x19lnbits:extension/zapgoals\x04\0\x0b\x0e\x01\0\x08zapgoals\x03\0\0\0G\x09\
+producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.227.1\x10wit-bindgen-rus\
+t\x060.41.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

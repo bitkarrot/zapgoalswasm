@@ -312,98 +312,78 @@ return function render(_ctx, _cache) {
       default: _withCtx(() => [
         _createVNode(_component_q_card, { class: "invoice-dialog q-pa-lg" }, {
           default: _withCtx(() => [
-            (_ctx.paymentState==='paid')
-              ? (_openBlock(), _createElementBlock("div", {
-                  key: 0,
-                  class: "payment-success text-center",
-                  "aria-live": "polite"
-                }, [
-                  _createVNode(_component_q_icon, {
-                    name: "check_circle",
-                    color: "positive",
-                    size: "5rem"
-                  }),
-                  _createElementVNode("div", { class: "text-h5 q-mt-md" }, "Payment received"),
-                  _createElementVNode("p", null, "Thank you for supporting this goal with " + _toDisplayString(_ctx.formatSats(_ctx.invoice?.amount)) + " sats.", 1 /* TEXT */),
-                  _createElementVNode("p", { class: "text-caption" }, "Goal progress updates from the receiving server."),
-                  _createVNode(_component_q_btn, {
-                    unelevated: "",
-                    color: "positive",
-                    label: "Done",
-                    onClick: _ctx.finishPayment
-                  }, null, 8 /* PROPS */, ["onClick"])
-                ]))
-              : (_ctx.invoice)
-                ? (_openBlock(), _createElementBlock("div", { key: 1 }, [
-                    _createElementVNode("div", { class: "text-h6 text-center" }, "Pay " + _toDisplayString(_ctx.formatSats(_ctx.invoice.amount)) + " sats", 1 /* TEXT */),
-                    _createElementVNode("div", { class: "text-center text-grey-7 q-mb-md" }, "Scan the QR code with a Lightning wallet, or copy and paste the BOLT11 invoice into your wallet."),
-                    _createElementVNode("div", { class: "qr-box" }, [
-                      _createVNode(_component_qrcode_vue, {
-                        value: 'LIGHTNING:'+_ctx.invoice.paymentRequest.toUpperCase(),
-                        size: 240
-                      }, null, 8 /* PROPS */, ["value"])
-                    ]),
-                    _createVNode(_component_q_input, {
-                      outlined: "",
-                      readonly: "",
-                      type: "textarea",
-                      autogrow: "",
-                      "model-value": _ctx.invoice.paymentRequest,
-                      label: "BOLT11 invoice"
-                    }, {
-                      append: _withCtx(() => [
-                        _createVNode(_component_q_btn, {
-                          flat: "",
-                          round: "",
-                          dense: "",
-                          icon: "content_copy",
-                          "aria-label": "Copy invoice",
-                          onClick: _ctx.copyInvoice
-                        }, null, 8 /* PROPS */, ["onClick"])
-                      ]),
-                      _: 1 /* STABLE */
-                    }, 8 /* PROPS */, ["model-value"]),
-                    (_ctx.monitoringError || _ctx.receiptError)
-                      ? (_openBlock(), _createElementBlock("div", {
-                          key: 0,
-                          class: "q-mt-md",
-                          role: "status"
-                        }, [
-                          (_ctx.monitoringError)
-                            ? (_openBlock(), _createElementBlock("p", { key: 0 }, _toDisplayString(_ctx.monitoringError), 1 /* TEXT */))
-                            : _createCommentVNode("v-if", true),
-                          (_ctx.receiptError)
-                            ? (_openBlock(), _createElementBlock("p", { key: 1 }, _toDisplayString(_ctx.receiptError), 1 /* TEXT */))
-                            : _createCommentVNode("v-if", true),
-                          _createVNode(_component_q_btn, {
-                            outline: "",
-                            color: "primary",
-                            label: "Retry payment monitoring",
-                            loading: _ctx.subscribing || Boolean(_ctx.receiptCheck),
-                            onClick: _ctx.retryPaymentMonitoring
-                          }, null, 8 /* PROPS */, ["loading", "onClick"])
-                        ]))
-                      : (_openBlock(), _createElementBlock("div", {
-                          key: 1,
-                          class: "pending-row",
-                          "aria-live": "polite"
-                        }, [
-                          _createVNode(_component_q_spinner_dots, {
-                            color: "primary",
-                            size: "2rem"
-                          }),
-                          _createElementVNode("span", null, "Waiting for verified payment…")
-                        ])),
-                    _createElementVNode("div", { class: "row justify-end q-mt-md" }, [
+            (_ctx.invoice)
+              ? (_openBlock(), _createElementBlock("div", { key: 0 }, [
+                  _createElementVNode("div", { class: "text-h6 text-center" }, "Pay " + _toDisplayString(_ctx.formatSats(_ctx.invoice.amount)) + " sats", 1 /* TEXT */),
+                  _createElementVNode("div", { class: "text-center text-grey-7 q-mb-md" }, "Scan the QR code with a Lightning wallet, or copy and paste the BOLT11 invoice into your wallet."),
+                  _createElementVNode("div", { class: "qr-box" }, [
+                    _createVNode(_component_qrcode_vue, {
+                      value: 'LIGHTNING:'+_ctx.invoice.paymentRequest.toUpperCase(),
+                      size: 240
+                    }, null, 8 /* PROPS */, ["value"])
+                  ]),
+                  _createVNode(_component_q_input, {
+                    outlined: "",
+                    readonly: "",
+                    type: "textarea",
+                    autogrow: "",
+                    "model-value": _ctx.invoice.paymentRequest,
+                    label: "BOLT11 invoice"
+                  }, {
+                    append: _withCtx(() => [
                       _createVNode(_component_q_btn, {
                         flat: "",
-                        color: "grey",
-                        label: "Close",
-                        onClick: _ctx.closeInvoice
+                        round: "",
+                        dense: "",
+                        icon: "content_copy",
+                        "aria-label": "Copy invoice",
+                        onClick: _ctx.copyInvoice
                       }, null, 8 /* PROPS */, ["onClick"])
-                    ])
-                  ]))
-                : _createCommentVNode("v-if", true)
+                    ]),
+                    _: 1 /* STABLE */
+                  }, 8 /* PROPS */, ["model-value"]),
+                  (_ctx.monitoringError || _ctx.receiptError)
+                    ? (_openBlock(), _createElementBlock("div", {
+                        key: 0,
+                        class: "q-mt-md",
+                        role: "status"
+                      }, [
+                        (_ctx.monitoringError)
+                          ? (_openBlock(), _createElementBlock("p", { key: 0 }, _toDisplayString(_ctx.monitoringError), 1 /* TEXT */))
+                          : _createCommentVNode("v-if", true),
+                        (_ctx.receiptError)
+                          ? (_openBlock(), _createElementBlock("p", { key: 1 }, _toDisplayString(_ctx.receiptError), 1 /* TEXT */))
+                          : _createCommentVNode("v-if", true),
+                        _createVNode(_component_q_btn, {
+                          outline: "",
+                          color: "primary",
+                          label: "Retry payment monitoring",
+                          loading: _ctx.subscribing || Boolean(_ctx.receiptCheck),
+                          onClick: _ctx.retryPaymentMonitoring
+                        }, null, 8 /* PROPS */, ["loading", "onClick"])
+                      ]))
+                    : (_openBlock(), _createElementBlock("div", {
+                        key: 1,
+                        class: "pending-row",
+                        "aria-live": "polite"
+                      }, [
+                        _createVNode(_component_q_spinner_dots, {
+                          color: "primary",
+                          size: "2rem"
+                        }),
+                        _createElementVNode("span", null, "Waiting for verified payment…"),
+                        _createElementVNode("span", { class: "text-caption q-ml-sm" }, "The dialog closes automatically once the payment is confirmed.")
+                      ])),
+                  _createElementVNode("div", { class: "row justify-end q-mt-md" }, [
+                    _createVNode(_component_q_btn, {
+                      flat: "",
+                      color: "grey",
+                      label: "Close",
+                      onClick: _ctx.closeInvoice
+                    }, null, 8 /* PROPS */, ["onClick"])
+                  ])
+                ]))
+              : _createCommentVNode("v-if", true)
           ]),
           _: 1 /* STABLE */
         })

@@ -8,7 +8,7 @@
       paymentState: 'idle', activeAttempt: null, attemptSequence: 0, watchSequence: 0,
       subscriptionId: '', subscribing: false, monitoringError: '', receiptError: '', removeBridgeListener: null,
       receiptPollTimer: null, receiptRequestTimer: null, receiptCheck: null,
-      authoritativeRetryTimer: null, pollTimer: null, clockTimer: null, disposed: false,
+      pollTimer: null, clockTimer: null, disposed: false,
       brandingSheet: null, lastGoalLoad: 0, loadInFlight: null, goalRequestSequence: 0,
       now: Date.now(), isDark: false
     }),
@@ -80,8 +80,6 @@
         // Invalidate before unsubscribing: queued callbacks and unresolved API
         // requests may outlive the dialog that originally started them.
         this.activeAttempt = null
-        clearTimeout(this.authoritativeRetryTimer)
-        this.authoritativeRetryTimer = null
         clearTimeout(this.receiptPollTimer)
         clearTimeout(this.receiptRequestTimer)
         this.receiptPollTimer = this.receiptRequestTimer = null
@@ -193,9 +191,11 @@
           if (status?.paid !== true) return
           this.paymentState = 'paid'
           this.monitoringError = ''
-          this.invoiceDialog = true
-          this.scheduleAuthoritativeRefresh(750, 0, attempt)
-          await this.stopWatching(this.subscriptionId)
+          // Confirm with a toast, refresh the authoritative progress, and close
+          // the dialog. No attempt state survives a completed payment.
+          this.loadGoal(true, true).catch(() => {})
+          try { await LNbitsBridge.notify('Payment received — thank you!', 'positive') } catch (_) {}
+          this.resetPayment()
         } catch (_) {
           if (this.isCurrentAttempt(attempt) && this.receiptCheck === check && this.paymentState === 'pending') this.receiptError = 'The receiving server has not confirmed this payment. We will keep checking. Check your wallet before paying again.'
         } finally {
@@ -213,26 +213,9 @@
         if (!this.subscriptionId && !this.subscribing) this.watchInvoice(attempt)
         await checking
       },
-      scheduleAuthoritativeRefresh(delay, retry, attempt) {
-        if (!this.isCurrentAttempt(attempt) || this.paymentState !== 'paid') return
-        clearTimeout(this.authoritativeRetryTimer)
-        this.authoritativeRetryTimer = setTimeout(() => {
-          if (!this.isCurrentAttempt(attempt) || this.paymentState !== 'paid') return
-          this.authoritativeRetryTimer = null
-          return this.refreshAfterPayment(attempt, retry)
-        }, delay)
-      },
-      async refreshAfterPayment(attempt, retry = 0) {
-        if (!this.isCurrentAttempt(attempt) || this.paymentState !== 'paid') return
-        await this.loadGoal(true, true, attempt)
-        // Receipt and aggregate progress are independent. Do not infer payment
-        // status from another donor's contribution or a period's running total.
-        if (this.isCurrentAttempt(attempt) && this.paymentState === 'paid' && retry < 2) this.scheduleAuthoritativeRefresh(2500 * 2 ** retry, retry + 1, attempt)
-      },
       async copyInvoice() { if (!this.invoice?.paymentRequest) return; try { await navigator.clipboard.writeText(this.invoice.paymentRequest); await LNbitsBridge.notify('Invoice copied.', 'positive') } catch (_) { try { await LNbitsBridge.notify('Clipboard access is unavailable. Select and copy the invoice text.', 'warning') } catch (_) {} } },
       onInvoiceDialogChange(visible) { if (!visible) this.closeInvoice() },
-      closeInvoice() { this.resetPayment() },
-      finishPayment() { this.resetPayment(); this.amount = null; this.comment = '' },
+      closeInvoice() { this.resetPayment(); this.amount = null; this.comment = '' },
       formatSats(value) { return Number(value || 0).toLocaleString() }
     },
     async mounted() {

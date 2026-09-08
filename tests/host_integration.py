@@ -38,6 +38,7 @@ OWNER = "fixture-owner-no-real-account"
 OTHER = "fixture-other-no-real-account"
 WALLET = "fixture-wallet-no-real-funds"
 OTHER_WALLET = "fixture-other-wallet-no-real-funds"
+TARGET_WALLET = "fixture-target-wallet-no-real-funds"
 
 
 def digest(path):
@@ -140,6 +141,8 @@ class Proof:
             ],
         }
         self.payments = []
+        self.sweep_targets = []
+        self.sweep_payments = []
         self.early_settlement = False
         self.engines = []
 
@@ -311,7 +314,7 @@ class Proof:
 
         async with self.core_db.connect() as conn:
             await m000_create_migrations_table(conn)
-        ext = InstallableExtension(id=EXTENSION, name="Zap Goals!", version="0.4.1")
+        ext = InstallableExtension(id=EXTENSION, name="Zap Goals!", version="0.5.0")
         migration_dir = self.extension / "storage" / "migrations"
         deferred = self.root / "deferred_migrations"
         deferred.mkdir()
@@ -524,6 +527,33 @@ class Proof:
     async def fake_create_payment(self, wallet_id, request):
         from lnbits.core.models.payments import Payment
 
+        if wallet_id == TARGET_WALLET:
+            # Manual sweep: an internal invoice on the owner's target wallet.
+            # The authenticated invoice host keeps extra flat; sweep metadata
+            # is present but no issuance binding exists.
+            self.check(
+                "sweepId" in request.extra and "issueId" not in request.extra,
+                "sweep target invoice carries sweep metadata only",
+            )
+            payment_hash = hashlib.sha256(
+                f"isolated-sweep-{len(self.payments)}".encode()
+            ).hexdigest()
+            payment = Payment(
+                checking_id="fixture-sweep-" + payment_hash,
+                payment_hash=payment_hash,
+                wallet_id=TARGET_WALLET,
+                amount=int(request.amount * 1000),
+                fee=0,
+                bolt11="lnbc-sweep-fixture-" + payment_hash,
+                memo=request.memo,
+                status="pending",
+                extra=request.extra,
+                extension=EXTENSION,
+                tag=EXTENSION,
+            )
+            self.payments.append(payment)
+            self.sweep_targets.append(payment)
+            return payment
         self.check(
             wallet_id == WALLET,
             "actual public invoice host selects source's private wallet",
@@ -603,6 +633,47 @@ class Proof:
     async def public_goal(self, goal_id):
         return await self.successful("get-public-goal", {"goalId": goal_id})
 
+    async def fake_pay_invoice(
+        self, *, wallet_id, payment_request, max_sat=None, extra=None, description="", tag=None
+    ):
+        from lnbits.core.models.payments import Payment
+
+        # Manual sweep payment: always from the goal's own wallet, paying the
+        # target-wallet invoice this proof just created, within max_sat.
+        self.check(
+            wallet_id == WALLET,
+            "sweep pays only from the goal's receiving wallet",
+        )
+        target = next(
+            (
+                payment
+                for payment in reversed(self.sweep_targets)
+                if payment.bolt11 == payment_request
+            ),
+            None,
+        )
+        self.check(target is not None, "sweep pays the created target invoice")
+        self.check(
+            max_sat is not None and max_sat * 1000 == target.amount,
+            "sweep payment is capped to the allocated amount",
+        )
+        self.sweep_payments.append(
+            {"wallet_id": wallet_id, "payment_request": payment_request, "max_sat": max_sat}
+        )
+        return Payment(
+            checking_id="fixture-sweep-pay-" + target.payment_hash,
+            payment_hash=target.payment_hash,
+            wallet_id=wallet_id,
+            amount=-target.amount,
+            fee=0,
+            bolt11=payment_request,
+            memo=description,
+            status="success",
+            extra=extra or {},
+            extension=EXTENSION,
+            tag=tag or EXTENSION,
+        )
+
     async def component_proof(self):
         from lnbits.core.wasm_ext.wasm.loader import load_wasm_extension
         from lnbits.core.crud import wallets as wallet_crud
@@ -621,11 +692,14 @@ class Proof:
             "actual component loaded only from isolated runtime copy",
         )
         self.check(
-            self.wasm.version == "0.4.1", "component config is pending 0.4.1 build"
+            self.wasm.version == "0.5.0", "component config is pending 0.5.0 build"
         )
         wallets = {
             WALLET: SimpleNamespace(
                 id=WALLET, user=OWNER, name="Fixture only", currency="sat"
+            ),
+            TARGET_WALLET: SimpleNamespace(
+                id=TARGET_WALLET, user=OWNER, name="Fixture sweep target", currency="sat"
             ),
             OTHER_WALLET: SimpleNamespace(
                 id=OTHER_WALLET, user=OTHER, name="Other fixture", currency="sat"
@@ -642,6 +716,8 @@ class Proof:
             wallet_crud, "get_wallets", get_wallets
         ), patch.object(
             payment_service, "create_payment_request", self.fake_create_payment
+        ), patch.object(
+            payment_service, "pay_invoice", self.fake_pay_invoice
         ):
             await self.lifecycle()
             await self.concurrent_events_and_archive()
@@ -687,7 +763,8 @@ class Proof:
         self.check("error" in denied, "create-goal rejects another user's wallet")
         listed_wallets = await self.successful("get-wallets", {}, user=OWNER)
         self.check(
-            [wallet["id"] for wallet in listed_wallets["data"]] == [WALLET],
+            [wallet["id"] for wallet in listed_wallets["data"]]
+            == [WALLET, TARGET_WALLET],
             "actual wallet-list host filters fixture user's wallets",
         )
         created = await self.successful("create-goal", self.request(), user=OWNER)
@@ -943,6 +1020,7 @@ class Proof:
                 recurrenceUnit="month",
                 recurrenceInterval=1,
                 recurrenceDayOfMonth=31,
+                targetWalletId=TARGET_WALLET,
             ),
             user=OWNER,
         )
@@ -990,11 +1068,18 @@ class Proof:
             and history[1]["endDate"] == "2024-03-31T00:00:00Z",
             "fixed day-31 anchor returns after leap February",
         )
-        await self.successful("sweep-goal", {"goalId": goal_id}, user=OWNER)
+        # No receipts exist yet: the manual sweep is a safe no-op and the
+        # scheduled summary remains read-only.
+        nothing = await self.successful("sweep-goal", {"goalId": goal_id}, user=OWNER)
+        self.check(
+            nothing["swept"] is False and nothing["available"] == 0,
+            "no allocation exists before any verified receipts",
+        )
+        self.check(len(self.sweep_payments) == 0, "nothing is transferred yet")
         await self.successful("sweep-due", {}, user=OWNER)
         self.check(
             await self.snapshot() == before,
-            "public/list-periods/manual/scheduled sweeps are entirely read-only",
+            "empty sweeps and scheduled summaries are entirely read-only",
         )
         concurrent = await asyncio.gather(
             *[
@@ -1004,11 +1089,11 @@ class Proof:
         )
         self.check(
             concurrent[0] == concurrent[1] == concurrent[2],
-            "concurrent read-only sweeps return deterministic projections",
+            "repeated empty sweeps are deterministic no-ops",
         )
         self.check(
             await self.snapshot() == before,
-            "concurrent sweep invocations create no closure rows or mutable totals",
+            "concurrent empty sweep invocations create no closure rows",
         )
         # A genuine new component-issued invoice belongs to the current period,
         # even though the immutable first targetDate is years in the past.
@@ -1021,7 +1106,11 @@ class Proof:
             "reaching target cannot close calendar early",
         )
         before = await self.snapshot()
-        await self.successful("sweep-goal", {"goalId": goal_id}, user=OWNER)
+        nothing = await self.successful("sweep-goal", {"goalId": goal_id}, user=OWNER)
+        self.check(
+            nothing["swept"] is False and nothing["available"] == 0,
+            "an open active period has nothing new to sweep",
+        )
         self.check(
             await self.snapshot() == before,
             "sweeping above target cannot mutate or close active period",
@@ -1110,6 +1199,61 @@ class Proof:
         self.check(
             (await self.public_goal(goal_id))["totals"] == totals,
             "replayed late event cannot double-credit derived totals",
+        )
+        # The manual sweep now transfers the recomputed allocation to the
+        # target wallet through real host invoice and payment calls.
+        swept = await self.successful("sweep-goal", {"goalId": goal_id}, user=OWNER)
+        self.check(
+            swept["swept"] is True and swept["amount"] == 250,
+            "manual sweep transfers the entire unswept allocation",
+        )
+        self.check(len(self.sweep_payments) == 1, "exactly one sweep payment")
+        marker = await self.row("sweeps", f"sweep:{goal_id}:{swept['closedPeriods']}")
+        self.check(
+            marker is not None
+            and marker["status"] == "completed"
+            and marker["paymentHash"] == swept["paymentHash"],
+            "durable marker records the completed transfer",
+        )
+        # The target invoice's settlement event must be quarantined: sweep
+        # metadata is not an issuance binding and the wallet is foreign. The
+        # payload is the real host event shape for this fixture payment.
+        from lnbits.core.wasm_ext.wasm.events import _wasm_invoice_paid_payload
+
+        target = self.sweep_targets[-1]
+        quarantine = await self.invoke(
+            "on-invoice-paid",
+            _wasm_invoice_paid_payload(target.copy(update={"status": "success"})),
+            event=True,
+            owner=self.owner,
+        )
+        self.check(
+            quarantine.get("quarantined") is True
+            and await self.row("payment_events", target.payment_hash) is None,
+            "sweep settlement is quarantined and never credits the goal",
+        )
+        after_sweep = await self.snapshot()
+        concurrent = await asyncio.gather(
+            *[
+                self.successful("sweep-goal", {"goalId": goal_id}, user=OWNER)
+                for _ in range(3)
+            ]
+        )
+        self.check(
+            concurrent[0] == concurrent[1] == concurrent[2],
+            "repeated sweeps at the same allocation are idempotent no-ops",
+        )
+        self.check(
+            len(self.sweep_payments) == 1,
+            "no concurrent sweep can pay the same allocation twice",
+        )
+        self.check(
+            await self.snapshot() == after_sweep,
+            "concurrent sweep invocations add no closure rows or mutable totals",
+        )
+        self.check(
+            (await self.public_goal(goal_id))["totals"] == totals,
+            "a completed sweep never changes derived goal totals",
         )
 
     async def pagination_proof(self):

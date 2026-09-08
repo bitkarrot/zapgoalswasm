@@ -187,6 +187,28 @@ return function render(_ctx, _cache) {
                               _: 1 /* STABLE */
                             }, 8 /* PROPS */, ["onClick"]))
                           : _createCommentVNode("v-if", true),
+                        (props.row.recurring && props.row.targetWalletId)
+                          ? (_openBlock(), _createBlock(_component_q_btn, {
+                              key: 1,
+                              flat: "",
+                              round: "",
+                              dense: "",
+                              color: "primary",
+                              icon: "sync",
+                              "aria-label": "Sweep to target wallet",
+                              onClick: $event => (_ctx.confirmSweep(props.row))
+                            }, {
+                              default: _withCtx(() => [
+                                _createVNode(_component_q_tooltip, null, {
+                                  default: _withCtx(() => [
+                                    _createTextVNode("Sweep to target wallet")
+                                  ]),
+                                  _: 1 /* STABLE */
+                                })
+                              ]),
+                              _: 1 /* STABLE */
+                            }, 8 /* PROPS */, ["onClick"]))
+                          : _createCommentVNode("v-if", true),
                         _createVNode(_component_q_btn, {
                           flat: "",
                           round: "",
@@ -259,6 +281,17 @@ return function render(_ctx, _cache) {
                                     round: "",
                                     icon: "history",
                                     onClick: $event => (_ctx.openPeriodsDialog(props.row))
+                                  }, null, 8 /* PROPS */, ["onClick"]))
+                                : _createCommentVNode("v-if", true),
+                              (props.row.recurring && props.row.targetWalletId)
+                                ? (_openBlock(), _createBlock(_component_q_btn, {
+                                    key: 1,
+                                    flat: "",
+                                    round: "",
+                                    color: "primary",
+                                    icon: "sync",
+                                    "aria-label": "Sweep to target wallet",
+                                    onClick: $event => (_ctx.confirmSweep(props.row))
                                   }, null, 8 /* PROPS */, ["onClick"]))
                                 : _createCommentVNode("v-if", true),
                               _createVNode(_component_q_btn, {
@@ -460,7 +493,7 @@ return function render(_ctx, _cache) {
                   _createVNode(_component_q_separator, { class: "q-my-md" }),
                   _createElementVNode("div", { class: "section-heading" }, [
                     _createElementVNode("div", { class: "text-subtitle1 text-weight-bold" }, "Recurring goal"),
-                    _createElementVNode("div", { class: "text-caption text-grey-6" }, "Fixed calendar periods advance automatically. Allocations and rollover are accounting only; no funds are transferred.")
+                    _createElementVNode("div", { class: "text-caption text-grey-6" }, "Fixed calendar periods advance automatically. Allocated sats stay in the goal's wallet until you transfer them with a manual sweep.")
                   ]),
                   _createVNode(_component_q_toggle, {
                     modelValue: _ctx.formDialog.data.recurring,
@@ -546,8 +579,8 @@ return function render(_ctx, _cache) {
                           "onUpdate:modelValue": $event => ((_ctx.formDialog.data.targetWalletId) = $event),
                           disable: _ctx.financialRulesLocked,
                           options: _ctx.walletOptions,
-                          label: "Wallet for external handling (reference only)",
-                          hint: "Recording a period does not transfer funds to this wallet."
+                          label: "Target wallet for manual sweeps",
+                          hint: "Sweeps transfer allocated sats to this wallet. Sweeps are manual only."
                         }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "disable", "options"]),
                         _createElementVNode("div", { class: "row q-col-gutter-md q-mb-md" }, [
                           _createElementVNode("div", { class: "col-12 col-sm-6" }, [
@@ -584,7 +617,7 @@ return function render(_ctx, _cache) {
                               name: "info",
                               class: "q-mr-sm"
                             }),
-                            _createTextVNode("Periods follow the fixed calendar automatically; no manual reset or scheduler is needed. Period history shows recorded allocations, rollover and retained excess. No funds move between wallets. Handle any intended transfers externally.")
+                            _createTextVNode("Periods follow the fixed calendar automatically; no manual reset or scheduler is needed. Period history shows recorded allocations, rollover and retained excess. Use the Sweep action on the goal list to transfer allocated sats to the target wallet; retained excess stays in the goal's wallet.")
                           ]),
                           _: 1 /* STABLE */
                         })
@@ -799,6 +832,45 @@ return function render(_ctx, _cache) {
       _: 1 /* STABLE */
     }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
     _createVNode(_component_q_dialog, {
+      modelValue: _ctx.sweepDialog.show,
+      "onUpdate:modelValue": $event => ((_ctx.sweepDialog.show) = $event)
+    }, {
+      default: _withCtx(() => [
+        _createVNode(_component_q_card, { class: "confirm-dialog q-pa-md" }, {
+          default: _withCtx(() => [
+            _createVNode(_component_q_card_section, null, {
+              default: _withCtx(() => [
+                _createElementVNode("div", { class: "text-h6" }, "Sweep to target wallet"),
+                _createElementVNode("p", null, "Transfer all currently allocated sats of “" + _toDisplayString(_ctx.sweepDialog.goal?.title) + "” to " + _toDisplayString(_ctx.walletName(_ctx.sweepDialog.goal?.targetWalletId)) + "?", 1 /* TEXT */),
+                _createElementVNode("p", { class: "text-caption" }, "This moves real funds now through an internal invoice, from the goal's receiving wallet. Allocated amounts come from closed periods; nothing is ever sent automatically. Repeat clicks are safe: the same allocation cannot be transferred twice.")
+              ]),
+              _: 1 /* STABLE */
+            }),
+            _createVNode(_component_q_card_actions, { align: "right" }, {
+              default: _withCtx(() => [
+                _createVNode(_component_q_btn, {
+                  flat: "",
+                  label: "Cancel",
+                  onClick: $event => (_ctx.sweepDialog.show=false)
+                }, null, 8 /* PROPS */, ["onClick"]),
+                _createVNode(_component_q_btn, {
+                  unelevated: "",
+                  color: "primary",
+                  icon: "sync",
+                  label: "Transfer",
+                  loading: _ctx.sweepDialog.loading,
+                  onClick: _ctx.sweepGoal
+                }, null, 8 /* PROPS */, ["loading", "onClick"])
+              ]),
+              _: 1 /* STABLE */
+            })
+          ]),
+          _: 1 /* STABLE */
+        })
+      ]),
+      _: 1 /* STABLE */
+    }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
+    _createVNode(_component_q_dialog, {
       modelValue: _ctx.embedDialog.show,
       "onUpdate:modelValue": $event => ((_ctx.embedDialog.show) = $event)
     }, {
@@ -853,7 +925,7 @@ return function render(_ctx, _cache) {
             _createVNode(_component_q_card_section, null, {
               default: _withCtx(() => [
                 _createElementVNode("div", { class: "text-h6" }, "Period history — " + _toDisplayString(_ctx.periodsDialog.goal?.title), 1 /* TEXT */),
-                _createElementVNode("p", { class: "text-caption" }, "Read-only fixed-calendar accounting. Recorded allocations are not wallet transfers; retained excess remains outside progress. Late payments can revise historical amounts."),
+                _createElementVNode("p", { class: "text-caption" }, "Fixed-calendar accounting: recorded allocations, rollover and retained excess. Use Sweep to transfer allocated sats to the target wallet; retained excess stays in the goal's wallet. Late payments can revise historical amounts."),
                 (_ctx.periodsDialog.goal?.legacyOpeningUnverified)
                   ? (_openBlock(), _createElementBlock("p", {
                       key: 0,

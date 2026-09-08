@@ -46,7 +46,7 @@ const recurringGoal = {
   ...goal, id: 'zg_offline_monthly_demo', title: 'Offline demo — monthly supplies',
   recurring: true, recurrenceUnit: 'month', recurrenceInterval: 1, recurrenceDayOfMonth: 1,
   periodIndex: 2, periodStartDate: '2026-09-01T00:00:00Z', periodEndDate: '2026-10-01T00:00:00Z',
-  targetWalletId: '', rolloverMode: 'reset_to_zero', sweepMode: 'target_amount'
+  targetWalletId: 'offline-demo-wallet', rolloverMode: 'reset_to_zero', sweepMode: 'target_amount'
 }
 const periods = [{
   id: 'offline-period-1', goalId: recurringGoal.id, periodIndex: 1,
@@ -149,7 +149,7 @@ const test = base.extend({
           const listeners = new Set()
           const state = window.__invoiceOnlyTest = {
             goal: {...goal}, goals: [{...goal}, {...recurringGoal}], paid: false,
-            invoiceRequests: [], receipts: [], subscriptions: [], unsubscriptions: [], apiCalls: [], unexpected: [], notifications: [], saves: [],
+            invoiceRequests: [], receipts: [], subscriptions: [], unsubscriptions: [], apiCalls: [], unexpected: [], notifications: [], saves: [], sweeps: [],
             invoiceQueue: [], receiptQueue: [], subscriptionQueue: [],
             holdInvoice: false, holdReceipt: false, holdSubscription: false,
             rejectSubscription: false, rejectReceipt: false, rejectInvoice: false,
@@ -181,6 +181,13 @@ const test = base.extend({
             if (method === 'GET' && pathname === `${API}/goals`) return {data: structuredClone(state.goals)}
             if (method === 'GET' && pathname === `${API}/wallets`) return {data: [{id: 'offline-demo-wallet', name: 'Offline demo wallet — no funds'}]}
             if (method === 'GET' && pathname === `${API}/goals/${recurringGoal.id}/periods`) return {data: structuredClone(periods)}
+            // The guarded sweep regression never transfers anything: the fixture
+            // always reports an empty allocation.
+            if (method === 'POST' && pathname.endsWith('/sweep')) {
+              state.sweeps.push({pathname, body: structuredClone(body)})
+              return {swept: false, goalId: recurringGoal.id, reason: 'Nothing available to sweep yet',
+                movedAmount: 1000, sweptAmount: 0, available: 0, closedPeriods: 2}
+            }
             if ((method === 'POST' && pathname === `${API}/goals`) || (method === 'PUT' && pathname.startsWith(`${API}/goals/`))) {
               state.saves.push({method, pathname, body: structuredClone(body)})
               const id = method === 'PUT' ? decodeURIComponent(pathname.slice(`${API}/goals/`.length)) : body.id || 'zg_offline_saved_demo'
@@ -268,10 +275,12 @@ async function emit(frame, subscriptionId, data = {}, event = 'payment.settled')
   await frame.evaluate(async ({subscriptionId, data, event}) => window.__invoiceOnlyTest.emit(event, subscriptionId, data), {subscriptionId, data, event})
 }
 async function expectPaid(frame) {
-  await expect(frame.getByText('Payment received', {exact: true})).toBeVisible()
-  await expect(frame.getByRole('button', {name: 'Done', exact: true})).toBeVisible()
-  await expect(frame.getByLabel('BOLT11 invoice')).toHaveCount(0)
-  expect(await frame.evaluate(() => window.ZapGoalsPublicApp.paymentState)).toBe('paid')
+  // Confirmation is a toast plus an automatic close; no attempt survives.
+  await expect(frame.locator('.invoice-dialog')).toHaveCount(0)
+  expect(await frame.evaluate(() => window.ZapGoalsPublicApp.paymentState)).toBe('idle')
+  expect(await frame.evaluate(() => window.ZapGoalsPublicApp.activeAttempt)).toBe(null)
+  const notifications = await frame.evaluate(() => window.__invoiceOnlyTest.notifications)
+  expect(notifications).toContainEqual({message: 'Payment received — thank you!', type: 'positive'})
 }
 
 test('stock v1.6 opaque sandbox renders actual invoice-only public UI and local QR', async ({harness}) => {
@@ -313,7 +322,6 @@ test('settlement broadcasts and aggregate progress are only wakeups; durable pai
   await expectPaid(frame)
   await expect(frame.getByText('Current 4,221 sats', {exact: true})).toBeVisible()
   expect(await frame.evaluate(() => window.__invoiceOnlyTest.unsubscriptions)).toContain(id)
-  await frame.getByRole('button', {name: 'Done', exact: true}).click()
   await emit(frame, id, {paid: true})
   await expect(frame.locator('.invoice-dialog')).toHaveCount(0)
   expect(await frame.evaluate(() => window.ZapGoalsPublicApp.paymentState)).toBe('idle')
@@ -428,7 +436,9 @@ test('actual administration offers invoice-only configuration and saves only in-
   expect(harness.network.frames).toEqual([{filename: 'templates/index.html', csp: stockCSP}])
   expect(harness.network.overlays).toEqual(expect.arrayContaining(['js/index.js', 'js/index-template.js', 'css/index.css']))
   await expect(frame.getByText(/No wallet connection is required/)).toBeVisible()
-  await expect(frame.getByRole('button', {name: /Close period|Reset period|Sweep|Delete goal/i})).toHaveCount(0)
+  await expect(frame.getByRole('button', {name: /Close period|Reset period|Delete goal/i})).toHaveCount(0)
+  // The manual sweep is offered only for recurring goals with a target wallet.
+  await expect(frame.getByRole('button', {name: 'Sweep to target wallet', exact: true})).toHaveCount(1)
   await screenshot(frame, 'goals', '.page-wrap')
   const row = frame.getByRole('row').filter({hasText: goal.title})
   await row.getByRole('button', {name: 'Edit goal', exact: true}).click()
@@ -461,7 +471,7 @@ test('fixed recurring rules are visibly disabled and protected on cosmetic save'
   const frame = await harness.mount('index')
   const row = frame.getByRole('row').filter({hasText: recurringGoal.title})
   await row.getByRole('button', {name: 'Edit goal', exact: true}).click()
-  for (const name of ['Wallet *', 'Goal amount *', 'Target date *', 'Recurrence unit', 'Interval', 'Day of month (0 = same day)', 'Wallet for external handling (reference only)', 'Allocation amount', 'Rollover mode']) {
+  for (const name of ['Wallet *', 'Goal amount *', 'Target date *', 'Recurrence unit', 'Interval', 'Day of month (0 = same day)', 'Target wallet for manual sweeps', 'Allocation amount', 'Rollover mode']) {
     // Quasar removes a disabled q-select's combobox/input from the a11y
     // tree, so inspect its real disabled field rather than a nonexistent input.
     const field = frame.locator('.q-field').filter({has: frame.getByText(name, {exact: true})})
@@ -508,8 +518,8 @@ test('read-only period history and archive disclosure replace manual financial c
   const frame = await harness.mount('index')
   const row = frame.getByRole('row').filter({hasText: recurringGoal.title})
   await row.getByRole('button', {name: 'Period history', exact: true}).click()
-  await expect(frame.getByText(/Read-only fixed-calendar accounting/)).toBeVisible()
-  await expect(frame.getByRole('columnheader', {name: 'Recorded allocation (no transfer)', exact: true})).toBeVisible()
+  await expect(frame.getByText(/Fixed-calendar accounting/)).toBeVisible()
+  await expect(frame.getByRole('columnheader', {name: 'Recorded allocation', exact: true})).toBeVisible()
   await expect(frame.getByRole('columnheader', {name: 'Retained excess', exact: true})).toBeVisible()
   await expect(frame.getByText('12,000 sats', {exact: true})).toBeVisible()
   await expect(frame.getByText('2,000 sats', {exact: true})).toBeVisible()
@@ -526,6 +536,26 @@ test('read-only period history and archive disclosure replace manual financial c
   // fixture DELETE. All unmocked bridge mutations fail closed.
   await frame.getByRole('button', {name: 'Cancel', exact: true}).click()
   expect(await frame.evaluate(() => window.__invoiceOnlyTest.apiCalls.some(call => call.method === 'DELETE' || /sweep/.test(call.pathname)))).toBe(false)
+})
+
+test('manual sweep requires confirmation and reports an empty allocation without transferring', async ({harness}) => {
+  const frame = await harness.mount('index')
+  const row = frame.getByRole('row').filter({hasText: recurringGoal.title})
+  await row.getByRole('button', {name: 'Sweep to target wallet', exact: true}).click()
+  // The confirmation states that real funds move and that repeats are safe.
+  await expect(frame.locator('.confirm-dialog').getByText('Sweep to target wallet', {exact: true})).toBeVisible()
+  await expect(frame.getByText(/moves real funds now/i)).toBeVisible()
+  await expect(frame.getByText(/same allocation cannot be transferred twice/i)).toBeVisible()
+  await screenshot(frame, 'sweep-confirm', '.confirm-dialog')
+  await frame.getByRole('button', {name: 'Transfer', exact: true}).click()
+  // The fixture sweep is a no-op: a warning toast, the dialog closes, and the
+  // goal list reloads. No invoice or payment API is ever touched.
+  await expect(frame.locator('.confirm-dialog')).toHaveCount(0)
+  await expect.poll(() => frame.evaluate(() => window.__invoiceOnlyTest.notifications.some(item => item.type === 'warning' && /Nothing available/i.test(item.message)))).toBe(true)
+  const sweeps = await frame.evaluate(() => window.__invoiceOnlyTest.sweeps)
+  expect(sweeps).toHaveLength(1)
+  expect(sweeps[0].pathname).toBe(`${API}/goals/${recurringGoal.id}/sweep`)
+  expect(await frame.evaluate(() => window.__invoiceOnlyTest.invoiceRequests)).toHaveLength(0)
 })
 
 test('only literal boolean true is a verified receiver receipt', async ({harness}) => {

@@ -7,6 +7,7 @@ use std::{cell::RefCell, collections::BTreeMap};
 
 pub const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 pub const WALLET: &str = "private-goal-wallet";
+pub const TARGET: &str = "private-target-wallet";
 
 #[derive(Clone)]
 pub struct StorageGetRequest {
@@ -88,6 +89,34 @@ pub struct WalletSummary {
 pub struct ListWalletsResponse {
     pub wallets: Vec<WalletSummary>,
 }
+#[derive(Clone)]
+pub struct CreateInvoiceRequest {
+    pub wallet_id: String,
+    pub amount: f64,
+    pub currency: String,
+    pub memo: String,
+    pub tag: String,
+    pub extra: Vec<(String, String)>,
+}
+#[derive(Clone)]
+pub struct PayInvoiceRequest {
+    pub wallet_id: String,
+    pub payment_request: String,
+    pub max_sat: Option<u64>,
+    pub description: String,
+    pub extra: Vec<(String, String)>,
+}
+pub struct PayInvoiceResponse {
+    pub ok: bool,
+    pub error: Option<String>,
+    pub checking_id: Option<String>,
+    pub payment_hash: Option<String>,
+    pub status: Option<String>,
+    pub amount_msat: i64,
+    pub fee_msat: i64,
+    pub pending: bool,
+    pub success: bool,
+}
 pub struct NowResponse {
     pub timestamp: u64,
 }
@@ -119,6 +148,9 @@ pub struct State {
     pub deny_append: bool,
     pub empty_append_id: bool,
     pub fail_invoice: bool,
+    pub sweep_invoices: Vec<CreateInvoiceRequest>,
+    pub sweep_payments: Vec<PayInvoiceRequest>,
+    pub fail_pay: bool,
     pub settle_during_create: bool,
     pub early_result: Option<Value>,
     pub append_limit: usize,
@@ -408,12 +440,77 @@ pub fn create_invoice_public(req: &CreateInvoicePublicRequest) -> CreateInvoiceR
 }
 pub fn list_user_wallets() -> ListWalletsResponse {
     ListWalletsResponse {
-        wallets: vec![WalletSummary {
-            id: WALLET.into(),
-            name: "Mock wallet".into(),
-            currency: None,
-        }],
+        wallets: vec![
+            WalletSummary {
+                id: WALLET.into(),
+                name: "Mock goal wallet".into(),
+                currency: None,
+            },
+            WalletSummary {
+                id: TARGET.into(),
+                name: "Mock target wallet".into(),
+                currency: None,
+            },
+        ],
     }
+}
+pub fn create_invoice(req: &CreateInvoiceRequest) -> CreateInvoiceResponse {
+    // Match the stock host's authenticated wallet-ownership check.
+    assert!(
+        [WALLET, TARGET].contains(&req.wallet_id.as_str()),
+        "stock host refuses invoices on wallets the user does not own"
+    );
+    assert_eq!(req.currency, "sat");
+    assert!(req.amount > 0.0 && req.amount.fract() == 0.0, "whole sats");
+    assert!(!req.tag.is_empty() && req.tag.len() <= 64);
+    assert!(!req.memo.is_empty() && req.memo.len() <= 512);
+    let (hash, checking) = state(|s| {
+        s.seq += 1;
+        (
+            format!("{:0>64}", s.seq),
+            format!("internal-sweep-invoice-{}", s.seq),
+        )
+    });
+    state(|s| s.sweep_invoices.push(req.clone()));
+    CreateInvoiceResponse {
+        payment_hash: hash,
+        payment_request: format!("lnbc-sweep-{}", checking),
+        checking_id: checking,
+    }
+}
+pub fn pay_invoice(req: &PayInvoiceRequest) -> PayInvoiceResponse {
+    assert!(
+        [WALLET, TARGET].contains(&req.wallet_id.as_str()),
+        "stock host refuses paying from wallets the user does not own"
+    );
+    state(|s| {
+        if s.fail_pay {
+            return PayInvoiceResponse {
+                ok: false,
+                error: Some("Insufficient balance in the goal wallet.".into()),
+                checking_id: None,
+                payment_hash: None,
+                status: None,
+                amount_msat: 0,
+                fee_msat: 0,
+                pending: false,
+                success: false,
+            };
+        }
+        s.sweep_payments.push(req.clone());
+        let amount_msat = (req.max_sat.unwrap_or(0) * 1000) as i64;
+        PayInvoiceResponse {
+            ok: true,
+            error: None,
+            checking_id: Some(format!("internal-pay-{}", s.seq)),
+            payment_hash: None,
+            status: Some("success".into()),
+            amount_msat,
+            fee_msat: 0,
+            pending: false,
+            success: true,
+        }
+    })
 }
 pub fn now() -> NowResponse {
     NowResponse {

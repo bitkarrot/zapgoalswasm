@@ -12,10 +12,11 @@ Invoice-only Lightning funding goals for the stock LNbits WASM sandbox. Create a
 - Goal-bound invoice issuance records and receiving-wallet/amount verification before credit.
 - Durable, verified receipt checks; WebSocket notifications alone never prove payment.
 - Fixed-calendar recurring periods with derived allocation/rollover history.
+- Manual sweeps that transfer a recurring goal's allocated sats to another wallet you own.
 - A standalone JavaScript widget, including multiple independent widgets on one page.
 - Archive goals without deleting their receipts or breaking settlement of existing invoices.
 
-**Not supported:** Bitcoin Connect, Nostr/NIP-57, Lightning Addresses, LNURL-pay, automatic wallet transfers, early/manual balance resets, or external iframe embedding. The stock host blocks external iframes and browser networking inside its WASM frame; this extension does not relax those protections. Invoice and receipt requests on the main page use the approved host bridge.
+**Not supported:** Bitcoin Connect, Nostr/NIP-57, Lightning Addresses, LNURL-pay, automatic or scheduled wallet transfers, early/manual balance resets, or external iframe embedding. Wallet transfers happen only when an owner runs a manual sweep. The stock host blocks external iframes and browser networking inside its WASM frame; this extension does not relax those protections. Invoice and receipt requests on the main page use the approved host bridge.
 
 ## Installation
 
@@ -29,6 +30,7 @@ Enable the extension for the user and review its permissions:
 - Read a restricted public goal/receipt projection.
 - Create public incoming invoices only for the receiving wallet stored on the goal.
 - Append private, goal-scoped issuance records before invoice creation.
+- Create internal invoices on, and pay invoices from, wallets you already own — used exclusively by the manual sweep action.
 
 There is **no outgoing-payment, generic network, or wallet-admin permission**. Upgrades adding the issuance permission require accepting that permission before invoice creation can work. Issuance records are not publicly readable. The host-enforced issuance limit is 10,000 attempts per goal; attempts that fail after recording issuance also consume a slot. Reaching the limit fails closed rather than creating an untracked invoice. There is no automatic deletion of security bindings.
 
@@ -47,7 +49,7 @@ Recurring financial rules are immutable after creation: receiving wallet, recurr
 
 The first period begins at creation and ends at the configured first deadline. Subsequent boundaries follow that anchor in UTC: daily, weekly, monthly, quarterly, semi-annual, or annual. Month-end days clamp to the actual target month's length without permanently drifting to the 28th.
 
-Periods advance by the calendar—no scheduler or “sweep” is needed. Early/manual resets are not available. Legacy sweep API paths are read-only compatibility summaries and do not move funds or change stored balances.
+Periods advance by the calendar—no scheduler or reset is needed. The recorded allocation is what a sweep may transfer; until you sweep, allocated sats simply remain in the goal's receiving wallet.
 
 ### Receipt-derived accounting
 
@@ -60,13 +62,24 @@ For each closed period:
 - With **counts as progress**, excess carries into the next period.
 - With **reset to zero**, excess is reported separately as retained rather than silently disappearing from accounting.
 
-“Allocated” and “retained” are accounting labels. **No funds are transferred.** Wallet balances and any actual transfer must be handled separately. Period history exposes the latest 100 projected closed periods; projection fails explicitly instead of truncating totals if its supported period/read budget is exceeded.
+“Allocated” and “retained” are accounting labels. Funds move only through the manual sweep below; retained excess always stays in the goal’s wallet. Period history exposes the latest 100 projected closed periods; projection fails explicitly instead of truncating totals if its supported period/read budget is exceeded.
 
 Contribution receipts and opening balances are never overwritten by presentation edits or period advancement. Duplicate events are no-ops. Stable, checked receipt snapshots prevent paging races from displaying incomplete sums; a busy/changing read can return a retryable error instead of an incorrect total.
 
+### Manual sweeps
+
+For a recurring goal with a configured target wallet, the admin list offers a **Sweep to target wallet** action. A sweep:
+
+- Transfers every sat allocated by closed periods and not yet swept — allocated minus already swept — from the goal’s receiving wallet to the target wallet through an internal invoice. Internal transfers between your own wallets settle immediately.
+- Is confirmed explicitly, moves real funds, and never runs automatically or on a schedule.
+- Is idempotent per accounting state: a repeated click at the same allocation cannot pay twice. A durable marker blocks concurrent sweeps, and a failed payment (for example, an empty goal wallet) is safely retryable.
+- Never touches goal progress: sweep settlement events carry no issuance binding and are quarantined by the settlement verifier.
+
+If late payments raise a closed period’s allocation after its range was already swept, reconcile manually — the same period range is never paid twice by an automatic re-sweep.
+
 ### Upgrading from 0.3.x
 
-Back up the extension database and stop the old runtime before the upgrade. Migration 005 is additive:
+Back up the extension database and stop the old runtime before the upgrade. Migrations 005 and 006 are additive (issuance bindings and the sweep ledger):
 
 - Existing `currentAmount` is preserved as the new series' opening balance; it is **not independently reconciled** by the migration.
 - Historical receipt hashes remain deduplication records, but are not counted again.
@@ -103,7 +116,8 @@ Base: `/api/v1/ext/zapgoalswasm`.
 - `POST /goals/{goalId}/invoice` — `{"amount":21,"comment":"Optional"}`; returns `paymentHash` and `paymentRequest`.
 - `GET /goals/{goalId}/payments/{paymentHash}` — `{"paid":true}` only for a durable verified receipt belonging to that goal; otherwise false.
 - `GET /goals/{goalId}/periods` — owned, derived period history.
-- Existing `/goals/{goalId}/sweep` and `/recurring/sweep-due` compatibility endpoints do not mutate accounting or transfer funds.
+- `POST /goals/{goalId}/sweep` — owner-only manual transfer of the unswept allocation to the goal’s target wallet.
+- Existing `/recurring/sweep-due` remains a read-only compatibility summary.
 
 On recurring updates, omit locked financial fields, especially the displayed `targetDate`: that value is the current derived deadline, not the immutable first-period anchor. Amounts are integer sats between 1 and 2,100,000,000; dates are validated and normalized to UTC.
 
