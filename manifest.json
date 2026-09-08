@@ -5,7 +5,7 @@
       "repo": "https://github.com/bitkarrot/zapgoalswasm",
       "version": "0.5.0",
       "archive": "https://github.com/bitkarrot/zapgoalswasm/releases/download/v0.5.0/zapgoalswasm-0.5.0.zip",
-      "hash": "41adf458b25de14e6de699f3059e0086423f97440f9032f73c3cdf099a8fcd79",
+      "hash": "d9e4d8cb94273c8fc3d8c6950b67b49556b9d84917787ac5e95e2b669c220c0c",
       "min_lnbits_version": "1.6.0",
       "name": "Zap Goals!",
       "short_description": "Create customizable Lightning funding goals with live progress",
