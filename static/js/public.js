@@ -32,14 +32,61 @@
       selectAmount(amount) { this.amount = Number(amount) },
       positiveAmount(value) { return Number.isInteger(Number(value)) && Number(value) >= 1 || 'Enter a whole number of at least 1 sat.' },
       async ensureBitcoinConnect() { if (window.ZapGoalsBitcoinConnect?.launchPaymentModal) return window.ZapGoalsBitcoinConnect; for (let i = 0; i < 30 && !window.ZapGoalsBitcoinConnect; i++) await new Promise(r => setTimeout(r, 100)); return window.ZapGoalsBitcoinConnect },
-      async createInvoice() { if (this.creatingInvoice || !Number.isInteger(Number(this.amount)) || Number(this.amount) < 1) return; this.creatingInvoice = true; try { this.startingAmount = Number(this.goal?.currentAmount || 0); this.invoice = await this.api('POST', `/goals/${this.goalId}/invoice`, {amount: Number(this.amount), comment: this.comment.trim() || null}); this.amountDialog = false; this.paymentState = 'pending'; await this.watchInvoice(this.invoice.paymentHash); if (this.goal?.walletMode === 'all') { try { const bc = await this.ensureBitcoinConnect(); if (bc?.launchPaymentModal) { bc.init({appName: 'ZapGoals', showBalance: false, persistConnection: true}); this.bitcoinConnectPayment = bc.launchPaymentModal({invoice: this.invoice.paymentRequest, paymentMethods: 'all', onPaid: () => this.markPaid('bitcoin-connect'), onCancelled: () => { this.bitcoinConnectPayment = null; this.invoiceDialog = true }}) } else { this.invoiceDialog = true } } catch (_) { this.invoiceDialog = true } } else { this.invoiceDialog = true } } catch (error) { await LNbitsBridge.notify(error.message, 'negative') } finally { this.creatingInvoice = false } },
+      async createInvoice() {
+        if (this.creatingInvoice || !Number.isInteger(Number(this.amount)) || Number(this.amount) < 1) return
+        this.creatingInvoice = true
+        try {
+          this.startingAmount = Number(this.goal?.currentAmount || 0)
+          const invoice = await this.api('POST', `/goals/${this.goalId}/invoice`, {amount: Number(this.amount), comment: this.comment.trim() || null})
+          this.invoice = invoice
+          this.amountDialog = false
+          this.paymentState = 'pending'
+          await this.watchInvoice(invoice.paymentHash)
+          // Settlement may arrive while the subscription or wallet UI is loading.
+          if (this.paymentState !== 'pending') return
+          if (this.goal?.walletMode === 'all') {
+            try {
+              const bc = await this.ensureBitcoinConnect()
+              if (this.paymentState !== 'pending') return
+              if (bc?.launchPaymentModal) {
+                bc.init({appName: 'ZapGoals', showBalance: false, persistConnection: true})
+                this.bitcoinConnectPayment = bc.launchPaymentModal({
+                  invoice: invoice.paymentRequest,
+                  paymentMethods: 'all',
+                  onPaid: () => this.markPaid('bitcoin-connect', invoice.paymentHash),
+                  onCancelled: () => {
+                    if (this.invoice?.paymentHash !== invoice.paymentHash || this.paymentState !== 'pending') return
+                    this.bitcoinConnectPayment = null
+                    this.invoiceDialog = true
+                  }
+                })
+              } else { this.invoiceDialog = true }
+            } catch (_) { this.invoiceDialog = true }
+          } else { this.invoiceDialog = true }
+        } catch (error) { await LNbitsBridge.notify(error.message, 'negative') }
+        finally { this.creatingInvoice = false }
+      },
       async watchInvoice(paymentHash) { if (!paymentHash) return; await this.stopWatching(); this.subscriptionId = `zap-${paymentHash.slice(0, 12)}`; await LNbitsBridge.subscribePayment(paymentHash, this.subscriptionId) },
       async stopWatching() { if (!this.subscriptionId) return; const id = this.subscriptionId; this.subscriptionId = ''; try { await LNbitsBridge.unsubscribePayment(id) } catch (_) {} },
       async onBridgeEvent(message) { if (!['payment.update', 'payment.settled'].includes(message.event) || message.subscriptionId !== this.subscriptionId) return; const payment = message.data || {}; if (message.event === 'payment.settled' || (payment.pending === false && ['success', 'settled', 'paid'].includes(String(payment.status || '')))) await this.markPaid('settled') },
       applyOptimisticPayment() { if (!this.goal) return; const expected = this.startingAmount + Number(this.amount || 0); if (Number(this.goal.currentAmount || 0) >= expected) return; this.goal = {...this.goal, currentAmount: expected, percent: expected * 100 / Math.max(1, Number(this.goal.goalAmount || 1)), status: expected >= Number(this.goal.goalAmount || Infinity) ? 'complete' : this.goal.status} },
-      async getPaymentPreimage() { if (!this.invoice?.paymentHash) return ''; try { const response = await fetch(`/api/v1/payments/${encodeURIComponent(this.invoice.paymentHash)}`); if (!response.ok) return ''; const data = await response.json(); return /^[0-9a-f]{64}$/i.test(data.preimage || '') ? data.preimage : '' } catch (_) { return '' } },
-      async closeBitcoinConnectPayment() { const payment = this.bitcoinConnectPayment; if (!payment?.setPaid) return; for (let attempt = 0; attempt < 6; attempt++) { const preimage = await this.getPaymentPreimage(); if (preimage) { payment.setPaid({preimage}); this.bitcoinConnectPayment = null; return } await new Promise(resolve => setTimeout(resolve, 500)) } },
-      async markPaid(source = 'settled') { this.paymentState = 'paid'; this.applyOptimisticPayment(); this.invoiceDialog = true; if (source === 'settled') { await this.closeBitcoinConnectPayment(); this.bitcoinConnectPayment = null; await this.stopWatching() } this.scheduleAuthoritativeRefresh(source === 'bitcoin-connect' ? 1500 : 750, 0) },
+      closeBitcoinConnectPayment() {
+        if (!this.bitcoinConnectPayment) return
+        this.bitcoinConnectPayment = null
+        // Settlement is already verified. Closing must not depend on a preimage
+        // lookup or setPaid(), which re-enters onPaid and leaves a delayed modal.
+        window.ZapGoalsBitcoinConnect.closeModal()
+      },
+      async markPaid(source = 'settled', paymentHash = this.invoice?.paymentHash) {
+        if (this.paymentState !== 'pending' || paymentHash !== this.invoice?.paymentHash) return
+        // Set this before closeModal(), whose onCancelled callback can run inline.
+        this.paymentState = 'paid'
+        this.applyOptimisticPayment()
+        this.closeBitcoinConnectPayment()
+        this.invoiceDialog = true
+        this.scheduleAuthoritativeRefresh(source === 'bitcoin-connect' ? 1500 : 750, 0)
+        await this.stopWatching()
+      },
       scheduleAuthoritativeRefresh(delay, attempt) { clearTimeout(this.authoritativeRetryTimer); this.authoritativeRetryTimer = setTimeout(() => this.refreshAfterPayment(attempt), delay) },
       async refreshAfterPayment(attempt) { const expected = this.startingAmount + Number(this.amount || 0); try { const goal = await this.api('GET', `/goals/${this.goalId}/public`); this.lastGoalLoad = Date.now(); if (Number(goal.currentAmount || 0) >= expected) { this.goal = goal; this.applyGoalDesign(goal); this.bitcoinConnectPayment = null; await this.stopWatching(); return } } catch (_) {} if (attempt < 2) this.scheduleAuthoritativeRefresh(2500 * 2 ** attempt, attempt + 1) },
       async copyInvoice() { if (!this.invoice?.paymentRequest) return; try { await navigator.clipboard.writeText(this.invoice.paymentRequest); await LNbitsBridge.notify('Invoice copied.', 'positive') } catch (_) { await LNbitsBridge.notify('Clipboard access is unavailable. Select and copy the invoice text.', 'warning') } },
