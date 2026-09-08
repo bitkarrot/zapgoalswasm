@@ -354,7 +354,14 @@ return function render(_ctx, _cache) {
                 ]),
                 _: 1 /* STABLE */
               }),
-              _createElementVNode("div", { class: "text-caption" }, "Created by bitkarrot")
+              _createElementVNode("div", { class: "text-caption" }, [
+                _createTextVNode("Created by "),
+                _createElementVNode("a", {
+                  href: "https://github.com/bitkarrot",
+                  target: "_blank",
+                  rel: "noopener noreferrer"
+                }, "bitkarrot")
+              ])
             ]),
             _: 1 /* STABLE */
           })
