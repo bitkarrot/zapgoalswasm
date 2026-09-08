@@ -51,7 +51,10 @@ window.LNbitsBridge = (() => {
     connect,
     context: () => context,
     callApi: (method, path, body) => request('api', {method: method.toUpperCase(), path, body}),
-    notify: (message, type = 'info') => request('ui.notify', {message, type}),
+    // The host dispatcher filters on the envelope's `type` and reads the toast
+    // level from `level`; a `type` field here would overwrite the envelope and
+    // leave the request unanswered forever.
+    notify: (message, level = 'info') => request('ui.notify', {message, level}),
     openInNewTab: url => request('navigation.open_new_tab', {url}),
     replaceRoute: path => request('navigation.replace', {path}),
     subscribePayment: (paymentHash, subscriptionId) => request('payment.subscribe', {paymentHash, subscriptionId}),

@@ -61,6 +61,56 @@ function setup(script = 'public') {
     unmount: () => options.beforeUnmount.call(app)}
 }
 
+test('bridge request envelopes never collide with action payload fields', async () => {
+  // The host dispatcher filters on message.type and answers by message.id.
+  // Loading the real bridge.js (not a stub) pins the exact posted shapes.
+  const posted = []
+  const port1 = {
+    onmessage: null,
+    postMessage(msg) {
+      posted.push(msg)
+      queueMicrotask(() => port1.onmessage && port1.onmessage({data: {type: 'lnbits-extension:response', id: msg.id, ok: true, data: {}}}))
+    }
+  }
+  const MessageChannel = function () { return {port1, port2: {}} }
+  const context = {
+    window: {}, document: {referrer: ''}, location: {origin: 'https://offline.invalid'},
+    MessageChannel, setTimeout: () => 0, clearTimeout: () => {}
+  }
+  context.window = context
+  context.self = context
+  vm.runInNewContext(read('static/js/bridge.js'), context)
+  const bridge = context.LNbitsBridge || context.window.LNbitsBridge
+  context.parent = {
+    postMessage(message) {
+      posted.push(message)
+      queueMicrotask(() => port1.onmessage && port1.onmessage({data: {type: 'lnbits-extension:connected'}}))
+    }
+  }
+  context.window.parent = context.parent
+  await bridge.connect()
+  const pending = [
+    bridge.callApi('GET', '/goals/x', null),
+    bridge.notify('Payment received — thank you!', 'positive'),
+    bridge.subscribePayment('a'.repeat(64), 'zap-1'),
+    bridge.unsubscribePayment('zap-1')
+  ]
+  await Promise.all(pending)
+  for (const msg of posted) {
+    if (msg.type !== 'lnbits-extension:request' && msg.type !== 'lnbits-extension:connect') continue
+    assert.ok(msg.id, 'every request carries a reply id')
+  }
+  const notifyMsg = posted.find(msg => msg.action === 'ui.notify')
+  assert.ok(notifyMsg, 'notify posts a request')
+  assert.equal(notifyMsg.type, 'lnbits-extension:request', 'no action field may overwrite the envelope type')
+  assert.equal(notifyMsg.level, 'positive', 'the toast level rides in level, never in type')
+  assert.equal(notifyMsg.message, 'Payment received — thank you!')
+  for (const [action, key] of [['api', 'method'], ['payment.subscribe', 'paymentHash'], ['payment.unsubscribe', 'subscriptionId']]) {
+    const msg = posted.find(item => item.action === action)
+    assert.ok(msg && key in msg, action + ' posts its documented field')
+  }
+})
+
 test('invoice amount, goal and comment are immutable; payment never increments the displayed total', async () => {
   const {app, calls, context, settle} = setup()
   const pending = deferred()

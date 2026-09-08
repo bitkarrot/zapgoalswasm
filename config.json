@@ -3,9 +3,9 @@
   "name": "Zap Goals!",
   "short_description": "Create customizable Lightning funding goals with live progress",
   "description": "Invoice-only public Lightning funding goals with local QR codes, verified contribution accounting, fixed calendar periods, manual wallet sweeps, and a JavaScript widget.",
-  "description_md": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/description.md",
+  "description_md": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/description.md",
   "repo": "https://github.com/bitkarrot/zapgoalswasm",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "min_lnbits_version": "1.6.0",
   "tile": "/ext-assets/zapgoalswasm/assets/icon.png",
   "tags": [
@@ -22,28 +22,28 @@
   ],
   "images": [
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-public-goal.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-public-goal.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-choose-zap.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-choose-zap.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-bolt11.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-bolt11.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-edit-goal.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-edit-goal.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-design-preview.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-design-preview.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-fixed-rules.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-fixed-rules.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-history.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-history.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.0/screenshots/invoice-only-mobile-invoice.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.1/screenshots/invoice-only-mobile-invoice.png"
     }
   ],
   "extension_type": "wasm",
