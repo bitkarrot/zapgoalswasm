@@ -1,20 +1,23 @@
 # ZapGoals WASM
 
-ZapGoals lets LNbits users create branded public fundraising pages with a satoshi target, deadline, live progress bar, descriptive text, configurable colors and fonts, and suggested contribution amounts.
+Create branded public Lightning funding goals with targets, deadlines, suggested contributions, configurable colors and fonts, and verified progress.
 
-Supporters can contribute through Bitcoin Connect or standard BOLT11 invoices and QR codes. Each settled contribution updates every open goal page in realtime. Goal totals include only invoices issued for that goal, not unrelated activity in the receiving wallet.
+**Invoice-only:** supporters scan a locally generated QR or copy a BOLT11 invoice into any Lightning wallet. There is no Bitcoin Connect, wallet-mode selector, payer credential, CDN, or third-party QR request.
 
 ## Features
 
-- Public goal pages with targets, deadlines, countdowns, and realtime updates
-- One to four configurable suggested zap amounts plus custom amounts and comments
-- Bitcoin Connect wallet connections and standard Lightning invoice payments
-- Custom colors, typography, titles, and text above or below the progress bar
-- Public goal and invoice APIs for alternate frontends
-- Direct LNURL-pay endpoints for each goal
-- Recurring goals with period-end sweeps, rollover modes, and a per-period ledger (daily, weekly, monthly, quarterly, semi-annual, or annual cycles)
-- Embeddable goal card via JS widget (Shadow DOM) or iframe for external websites
+- Public goal pages and a multi-goal JavaScript widget.
+- Suggested/custom whole-satoshi amounts and optional comments.
+- Private invoice issuance binding and receiving-wallet/amount verification.
+- Durable receipt checks: socket broadcasts alone never confirm payment.
+- Fixed UTC calendar periods with immutable financial rules and derived history.
+- Explicit allocation, rollover, and retained excess accounting; **no wallet transfers**.
+- Goal archiving that preserves receipts and existing invoice settlement.
 
-This WASM port runs in a sandboxed WebAssembly module. Lightning Address routing and NIP-57 signature/receipt processing require host capabilities not currently exposed to WASM and are not included. Internal wallet transfers for recurring sweeps are not supported by the WASM host; sweeps can be triggered manually from the admin UI or via the scheduler-compatible endpoint.
+Recurring periods advance automatically from their fixed calendar. Late payments update the invoice's original period and subsequent carry; history is a projection, not a frozen transfer record. Changing a recurring goal's financial rules requires a new goal.
 
-Created by [bitkarrot](https://github.com/bitkarrot). Source code and releases are available at [github.com/bitkarrot/zapgoalswasm](https://github.com/bitkarrot/zapgoalswasm).
+This extension respects the stock LNbits WASM sandbox. Bitcoin Connect, LNURL-pay, Lightning Addresses, NIP-57, manual/early resets, and external iframe embedding are not offered. The supported embed is a first-party JavaScript widget for websites you control.
+
+An upgrade from 0.3.x preserves the old displayed balance as an **unreconciled opening balance**, retains legacy records without recounting them, and quarantines old invoices lacking a private issuance record. Review the upgrade instructions and reconcile outstanding old invoices before cutover.
+
+Created by bitkarrot. MIT licensed, with the retained QR generator's notices included.

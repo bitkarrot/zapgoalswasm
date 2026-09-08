@@ -170,14 +170,14 @@ pub unsafe fn __post_return_create_invoice<T: Guest>(arg0: *mut u8) {
 }
 #[doc(hidden)]
 #[allow(non_snake_case)]
-pub unsafe fn _export_lnurl_params_cabi<T: Guest>(
+pub unsafe fn _export_invoice_status_cabi<T: Guest>(
     arg0: *mut u8,
     arg1: usize,
 ) -> *mut u8 {
     #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
     let len0 = arg1;
     let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
-    let result1 = T::lnurl_params(_rt::string_lift(bytes0));
+    let result1 = T::invoice_status(_rt::string_lift(bytes0));
     let ptr2 = (&raw mut _RET_AREA.0).cast::<u8>();
     let vec3 = (result1.into_bytes()).into_boxed_slice();
     let ptr3 = vec3.as_ptr().cast::<u8>();
@@ -189,33 +189,7 @@ pub unsafe fn _export_lnurl_params_cabi<T: Guest>(
 }
 #[doc(hidden)]
 #[allow(non_snake_case)]
-pub unsafe fn __post_return_lnurl_params<T: Guest>(arg0: *mut u8) {
-    let l0 = *arg0.add(0).cast::<*mut u8>();
-    let l1 = *arg0.add(::core::mem::size_of::<*const u8>()).cast::<usize>();
-    _rt::cabi_dealloc(l0, l1, 1);
-}
-#[doc(hidden)]
-#[allow(non_snake_case)]
-pub unsafe fn _export_lnurl_callback_cabi<T: Guest>(
-    arg0: *mut u8,
-    arg1: usize,
-) -> *mut u8 {
-    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-    let len0 = arg1;
-    let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
-    let result1 = T::lnurl_callback(_rt::string_lift(bytes0));
-    let ptr2 = (&raw mut _RET_AREA.0).cast::<u8>();
-    let vec3 = (result1.into_bytes()).into_boxed_slice();
-    let ptr3 = vec3.as_ptr().cast::<u8>();
-    let len3 = vec3.len();
-    ::core::mem::forget(vec3);
-    *ptr2.add(::core::mem::size_of::<*const u8>()).cast::<usize>() = len3;
-    *ptr2.add(0).cast::<*mut u8>() = ptr3.cast_mut();
-    ptr2
-}
-#[doc(hidden)]
-#[allow(non_snake_case)]
-pub unsafe fn __post_return_lnurl_callback<T: Guest>(arg0: *mut u8) {
+pub unsafe fn __post_return_invoice_status<T: Guest>(arg0: *mut u8) {
     let l0 = *arg0.add(0).cast::<*mut u8>();
     let l1 = *arg0.add(::core::mem::size_of::<*const u8>()).cast::<usize>();
     _rt::cabi_dealloc(l0, l1, 1);
@@ -326,8 +300,7 @@ pub trait Guest {
     fn delete_goal(payload: _rt::String) -> _rt::String;
     fn get_public_goal(payload: _rt::String) -> _rt::String;
     fn create_invoice(payload: _rt::String) -> _rt::String;
-    fn lnurl_params(payload: _rt::String) -> _rt::String;
-    fn lnurl_callback(payload: _rt::String) -> _rt::String;
+    fn invoice_status(payload: _rt::String) -> _rt::String;
     fn on_invoice_paid(payload: _rt::String) -> _rt::String;
     fn sweep_goal(payload: _rt::String) -> _rt::String;
     fn list_periods(payload: _rt::String) -> _rt::String;
@@ -375,17 +348,12 @@ macro_rules! __export_world_zapgoals_cabi {
         "cabi_post_create-invoice")] unsafe extern "C" fn
         _post_return_create_invoice(arg0 : * mut u8,) { unsafe { $($path_to_types)*::
         __post_return_create_invoice::<$ty > (arg0) } } #[unsafe (export_name =
-        "lnurl-params")] unsafe extern "C" fn export_lnurl_params(arg0 : * mut u8, arg1 :
-        usize,) -> * mut u8 { unsafe { $($path_to_types)*::
-        _export_lnurl_params_cabi::<$ty > (arg0, arg1) } } #[unsafe (export_name =
-        "cabi_post_lnurl-params")] unsafe extern "C" fn _post_return_lnurl_params(arg0 :
-        * mut u8,) { unsafe { $($path_to_types)*:: __post_return_lnurl_params::<$ty >
-        (arg0) } } #[unsafe (export_name = "lnurl-callback")] unsafe extern "C" fn
-        export_lnurl_callback(arg0 : * mut u8, arg1 : usize,) -> * mut u8 { unsafe {
-        $($path_to_types)*:: _export_lnurl_callback_cabi::<$ty > (arg0, arg1) } }
-        #[unsafe (export_name = "cabi_post_lnurl-callback")] unsafe extern "C" fn
-        _post_return_lnurl_callback(arg0 : * mut u8,) { unsafe { $($path_to_types)*::
-        __post_return_lnurl_callback::<$ty > (arg0) } } #[unsafe (export_name =
+        "invoice-status")] unsafe extern "C" fn export_invoice_status(arg0 : * mut u8,
+        arg1 : usize,) -> * mut u8 { unsafe { $($path_to_types)*::
+        _export_invoice_status_cabi::<$ty > (arg0, arg1) } } #[unsafe (export_name =
+        "cabi_post_invoice-status")] unsafe extern "C" fn
+        _post_return_invoice_status(arg0 : * mut u8,) { unsafe { $($path_to_types)*::
+        __post_return_invoice_status::<$ty > (arg0) } } #[unsafe (export_name =
         "on-invoice-paid")] unsafe extern "C" fn export_on_invoice_paid(arg0 : * mut u8,
         arg1 : usize,) -> * mut u8 { unsafe { $($path_to_types)*::
         _export_on_invoice_paid_cabi::<$ty > (arg0, arg1) } } #[unsafe (export_name =
@@ -470,6 +438,38 @@ pub mod lnbits {
                 ) -> ::core::fmt::Result {
                     f.debug_struct("StorageGetPublicRequest")
                         .field("table", &self.table)
+                        .field("id", &self.id)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub struct StorageAppendPublicRequest {
+                pub table: _rt::String,
+                pub source_id: _rt::String,
+                pub data_json: Option<_rt::String>,
+            }
+            impl ::core::fmt::Debug for StorageAppendPublicRequest {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("StorageAppendPublicRequest")
+                        .field("table", &self.table)
+                        .field("source-id", &self.source_id)
+                        .field("data-json", &self.data_json)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub struct StorageAppendPublicResponse {
+                pub id: _rt::String,
+            }
+            impl ::core::fmt::Debug for StorageAppendPublicResponse {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("StorageAppendPublicResponse")
                         .field("id", &self.id)
                         .finish()
                 }
@@ -579,12 +579,42 @@ pub mod lnbits {
                 }
             }
             #[derive(Clone)]
+            pub struct StoragePublicPaginatedRequest {
+                pub table: _rt::String,
+                pub source_id: _rt::String,
+                pub filters_json: Option<_rt::String>,
+                pub search: Option<_rt::String>,
+                pub search_fields_json: Option<_rt::String>,
+                pub sort_by: Option<_rt::String>,
+                pub descending: bool,
+                pub limit: u32,
+                pub offset: u32,
+            }
+            impl ::core::fmt::Debug for StoragePublicPaginatedRequest {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("StoragePublicPaginatedRequest")
+                        .field("table", &self.table)
+                        .field("source-id", &self.source_id)
+                        .field("filters-json", &self.filters_json)
+                        .field("search", &self.search)
+                        .field("search-fields-json", &self.search_fields_json)
+                        .field("sort-by", &self.sort_by)
+                        .field("descending", &self.descending)
+                        .field("limit", &self.limit)
+                        .field("offset", &self.offset)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
             pub struct CreateInvoicePublicRequest {
                 pub source_id: _rt::String,
                 pub amount: u64,
                 pub currency: _rt::String,
                 pub memo: _rt::String,
-                pub extra_json: Option<_rt::String>,
+                pub extra: _rt::Vec<(_rt::String, _rt::String)>,
             }
             impl ::core::fmt::Debug for CreateInvoicePublicRequest {
                 fn fmt(
@@ -596,7 +626,7 @@ pub mod lnbits {
                         .field("amount", &self.amount)
                         .field("currency", &self.currency)
                         .field("memo", &self.memo)
-                        .field("extra-json", &self.extra_json)
+                        .field("extra", &self.extra)
                         .finish()
                 }
             }
@@ -873,6 +903,95 @@ pub mod lnbits {
                 }
             }
             #[allow(unused_unsafe, clippy::all)]
+            pub fn storage_append_public(
+                req: &StorageAppendPublicRequest,
+            ) -> StorageAppendPublicResponse {
+                unsafe {
+                    #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
+                    #[cfg_attr(target_pointer_width = "32", repr(align(4)))]
+                    struct RetArea(
+                        [::core::mem::MaybeUninit<
+                            u8,
+                        >; 2 * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let mut ret_area = RetArea(
+                        [::core::mem::MaybeUninit::uninit(); 2
+                            * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let StorageAppendPublicRequest {
+                        table: table0,
+                        source_id: source_id0,
+                        data_json: data_json0,
+                    } = req;
+                    let vec1 = table0;
+                    let ptr1 = vec1.as_ptr().cast::<u8>();
+                    let len1 = vec1.len();
+                    let vec2 = source_id0;
+                    let ptr2 = vec2.as_ptr().cast::<u8>();
+                    let len2 = vec2.len();
+                    let (result4_0, result4_1, result4_2) = match data_json0 {
+                        Some(e) => {
+                            let vec3 = e;
+                            let ptr3 = vec3.as_ptr().cast::<u8>();
+                            let len3 = vec3.len();
+                            (1i32, ptr3.cast_mut(), len3)
+                        }
+                        None => (0i32, ::core::ptr::null_mut(), 0usize),
+                    };
+                    let ptr5 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "lnbits:extension/host")]
+                    unsafe extern "C" {
+                        #[link_name = "storage-append-public"]
+                        fn wit_import6(
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                            _: usize,
+                            _: i32,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                        );
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    unsafe extern "C" fn wit_import6(
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                        _: usize,
+                        _: i32,
+                        _: *mut u8,
+                        _: usize,
+                        _: *mut u8,
+                    ) {
+                        unreachable!()
+                    }
+                    unsafe {
+                        wit_import6(
+                            ptr1.cast_mut(),
+                            len1,
+                            ptr2.cast_mut(),
+                            len2,
+                            result4_0,
+                            result4_1,
+                            result4_2,
+                            ptr5,
+                        )
+                    };
+                    let l7 = *ptr5.add(0).cast::<*mut u8>();
+                    let l8 = *ptr5
+                        .add(::core::mem::size_of::<*const u8>())
+                        .cast::<usize>();
+                    let len9 = l8;
+                    let bytes9 = _rt::Vec::from_raw_parts(l7.cast(), len9, len9);
+                    let result10 = StorageAppendPublicResponse {
+                        id: _rt::string_lift(bytes9),
+                    };
+                    result10
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
             pub fn storage_set(req: &StorageSetRequest) -> StorageSetResponse {
                 unsafe {
                     let StorageSetRequest { table: table0, data_json: data_json0 } = req;
@@ -1117,6 +1236,168 @@ pub mod lnbits {
                 }
             }
             #[allow(unused_unsafe, clippy::all)]
+            pub fn storage_get_public_paginated(
+                req: &StoragePublicPaginatedRequest,
+            ) -> StoragePaginatedResponse {
+                unsafe {
+                    #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
+                    #[cfg_attr(target_pointer_width = "32", repr(align(4)))]
+                    struct RetArea(
+                        [::core::mem::MaybeUninit<
+                            u8,
+                        >; 8 + 17 * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let mut ret_area = RetArea(
+                        [::core::mem::MaybeUninit::uninit(); 8
+                            + 17 * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    let StoragePublicPaginatedRequest {
+                        table: table1,
+                        source_id: source_id1,
+                        filters_json: filters_json1,
+                        search: search1,
+                        search_fields_json: search_fields_json1,
+                        sort_by: sort_by1,
+                        descending: descending1,
+                        limit: limit1,
+                        offset: offset1,
+                    } = req;
+                    let vec2 = table1;
+                    let ptr2 = vec2.as_ptr().cast::<u8>();
+                    let len2 = vec2.len();
+                    *ptr0.add(::core::mem::size_of::<*const u8>()).cast::<usize>() = len2;
+                    *ptr0.add(0).cast::<*mut u8>() = ptr2.cast_mut();
+                    let vec3 = source_id1;
+                    let ptr3 = vec3.as_ptr().cast::<u8>();
+                    let len3 = vec3.len();
+                    *ptr0.add(3 * ::core::mem::size_of::<*const u8>()).cast::<usize>() = len3;
+                    *ptr0
+                        .add(2 * ::core::mem::size_of::<*const u8>())
+                        .cast::<*mut u8>() = ptr3.cast_mut();
+                    match filters_json1 {
+                        Some(e) => {
+                            *ptr0
+                                .add(4 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (1i32) as u8;
+                            let vec4 = e;
+                            let ptr4 = vec4.as_ptr().cast::<u8>();
+                            let len4 = vec4.len();
+                            *ptr0
+                                .add(6 * ::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len4;
+                            *ptr0
+                                .add(5 * ::core::mem::size_of::<*const u8>())
+                                .cast::<*mut u8>() = ptr4.cast_mut();
+                        }
+                        None => {
+                            *ptr0
+                                .add(4 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (0i32) as u8;
+                        }
+                    };
+                    match search1 {
+                        Some(e) => {
+                            *ptr0
+                                .add(7 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (1i32) as u8;
+                            let vec5 = e;
+                            let ptr5 = vec5.as_ptr().cast::<u8>();
+                            let len5 = vec5.len();
+                            *ptr0
+                                .add(9 * ::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len5;
+                            *ptr0
+                                .add(8 * ::core::mem::size_of::<*const u8>())
+                                .cast::<*mut u8>() = ptr5.cast_mut();
+                        }
+                        None => {
+                            *ptr0
+                                .add(7 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (0i32) as u8;
+                        }
+                    };
+                    match search_fields_json1 {
+                        Some(e) => {
+                            *ptr0
+                                .add(10 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (1i32) as u8;
+                            let vec6 = e;
+                            let ptr6 = vec6.as_ptr().cast::<u8>();
+                            let len6 = vec6.len();
+                            *ptr0
+                                .add(12 * ::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len6;
+                            *ptr0
+                                .add(11 * ::core::mem::size_of::<*const u8>())
+                                .cast::<*mut u8>() = ptr6.cast_mut();
+                        }
+                        None => {
+                            *ptr0
+                                .add(10 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (0i32) as u8;
+                        }
+                    };
+                    match sort_by1 {
+                        Some(e) => {
+                            *ptr0
+                                .add(13 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (1i32) as u8;
+                            let vec7 = e;
+                            let ptr7 = vec7.as_ptr().cast::<u8>();
+                            let len7 = vec7.len();
+                            *ptr0
+                                .add(15 * ::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len7;
+                            *ptr0
+                                .add(14 * ::core::mem::size_of::<*const u8>())
+                                .cast::<*mut u8>() = ptr7.cast_mut();
+                        }
+                        None => {
+                            *ptr0
+                                .add(13 * ::core::mem::size_of::<*const u8>())
+                                .cast::<u8>() = (0i32) as u8;
+                        }
+                    };
+                    *ptr0.add(16 * ::core::mem::size_of::<*const u8>()).cast::<u8>() = (match descending1 {
+                        true => 1,
+                        false => 0,
+                    }) as u8;
+                    *ptr0
+                        .add(4 + 16 * ::core::mem::size_of::<*const u8>())
+                        .cast::<i32>() = _rt::as_i32(limit1);
+                    *ptr0
+                        .add(8 + 16 * ::core::mem::size_of::<*const u8>())
+                        .cast::<i32>() = _rt::as_i32(offset1);
+                    let ptr8 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "lnbits:extension/host")]
+                    unsafe extern "C" {
+                        #[link_name = "storage-get-public-paginated"]
+                        fn wit_import9(_: *mut u8, _: *mut u8);
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    unsafe extern "C" fn wit_import9(_: *mut u8, _: *mut u8) {
+                        unreachable!()
+                    }
+                    unsafe { wit_import9(ptr0, ptr8) };
+                    let l10 = *ptr8.add(0).cast::<*mut u8>();
+                    let l11 = *ptr8
+                        .add(::core::mem::size_of::<*const u8>())
+                        .cast::<usize>();
+                    let len12 = l11;
+                    let bytes12 = _rt::Vec::from_raw_parts(l10.cast(), len12, len12);
+                    let l13 = *ptr8
+                        .add(2 * ::core::mem::size_of::<*const u8>())
+                        .cast::<i32>();
+                    let result14 = StoragePaginatedResponse {
+                        rows_json: _rt::string_lift(bytes12),
+                        total: l13 as u32,
+                    };
+                    result14
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
             pub fn create_invoice_public(
                 req: &CreateInvoicePublicRequest,
             ) -> CreateInvoiceResponse {
@@ -1137,7 +1418,7 @@ pub mod lnbits {
                         amount: amount0,
                         currency: currency0,
                         memo: memo0,
-                        extra_json: extra_json0,
+                        extra: extra0,
                     } = req;
                     let vec1 = source_id0;
                     let ptr1 = vec1.as_ptr().cast::<u8>();
@@ -1148,21 +1429,50 @@ pub mod lnbits {
                     let vec3 = memo0;
                     let ptr3 = vec3.as_ptr().cast::<u8>();
                     let len3 = vec3.len();
-                    let (result5_0, result5_1, result5_2) = match extra_json0 {
-                        Some(e) => {
-                            let vec4 = e;
-                            let ptr4 = vec4.as_ptr().cast::<u8>();
-                            let len4 = vec4.len();
-                            (1i32, ptr4.cast_mut(), len4)
+                    let vec7 = extra0;
+                    let len7 = vec7.len();
+                    let layout7 = _rt::alloc::Layout::from_size_align_unchecked(
+                        vec7.len() * (4 * ::core::mem::size_of::<*const u8>()),
+                        ::core::mem::size_of::<*const u8>(),
+                    );
+                    let result7 = if layout7.size() != 0 {
+                        let ptr = _rt::alloc::alloc(layout7).cast::<u8>();
+                        if ptr.is_null() {
+                            _rt::alloc::handle_alloc_error(layout7);
                         }
-                        None => (0i32, ::core::ptr::null_mut(), 0usize),
+                        ptr
+                    } else {
+                        ::core::ptr::null_mut()
                     };
-                    let ptr6 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    for (i, e) in vec7.into_iter().enumerate() {
+                        let base = result7
+                            .add(i * (4 * ::core::mem::size_of::<*const u8>()));
+                        {
+                            let (t4_0, t4_1) = e;
+                            let vec5 = t4_0;
+                            let ptr5 = vec5.as_ptr().cast::<u8>();
+                            let len5 = vec5.len();
+                            *base
+                                .add(::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len5;
+                            *base.add(0).cast::<*mut u8>() = ptr5.cast_mut();
+                            let vec6 = t4_1;
+                            let ptr6 = vec6.as_ptr().cast::<u8>();
+                            let len6 = vec6.len();
+                            *base
+                                .add(3 * ::core::mem::size_of::<*const u8>())
+                                .cast::<usize>() = len6;
+                            *base
+                                .add(2 * ::core::mem::size_of::<*const u8>())
+                                .cast::<*mut u8>() = ptr6.cast_mut();
+                        }
+                    }
+                    let ptr8 = ret_area.0.as_mut_ptr().cast::<u8>();
                     #[cfg(target_arch = "wasm32")]
                     #[link(wasm_import_module = "lnbits:extension/host")]
                     unsafe extern "C" {
                         #[link_name = "create-invoice-public"]
-                        fn wit_import7(
+                        fn wit_import9(
                             _: *mut u8,
                             _: usize,
                             _: i64,
@@ -1170,14 +1480,13 @@ pub mod lnbits {
                             _: usize,
                             _: *mut u8,
                             _: usize,
-                            _: i32,
                             _: *mut u8,
                             _: usize,
                             _: *mut u8,
                         );
                     }
                     #[cfg(not(target_arch = "wasm32"))]
-                    unsafe extern "C" fn wit_import7(
+                    unsafe extern "C" fn wit_import9(
                         _: *mut u8,
                         _: usize,
                         _: i64,
@@ -1185,7 +1494,6 @@ pub mod lnbits {
                         _: usize,
                         _: *mut u8,
                         _: usize,
-                        _: i32,
                         _: *mut u8,
                         _: usize,
                         _: *mut u8,
@@ -1193,7 +1501,7 @@ pub mod lnbits {
                         unreachable!()
                     }
                     unsafe {
-                        wit_import7(
+                        wit_import9(
                             ptr1.cast_mut(),
                             len1,
                             _rt::as_i64(amount0),
@@ -1201,40 +1509,42 @@ pub mod lnbits {
                             len2,
                             ptr3.cast_mut(),
                             len3,
-                            result5_0,
-                            result5_1,
-                            result5_2,
-                            ptr6,
+                            result7,
+                            len7,
+                            ptr8,
                         )
                     };
-                    let l8 = *ptr6.add(0).cast::<*mut u8>();
-                    let l9 = *ptr6
+                    let l10 = *ptr8.add(0).cast::<*mut u8>();
+                    let l11 = *ptr8
                         .add(::core::mem::size_of::<*const u8>())
                         .cast::<usize>();
-                    let len10 = l9;
-                    let bytes10 = _rt::Vec::from_raw_parts(l8.cast(), len10, len10);
-                    let l11 = *ptr6
+                    let len12 = l11;
+                    let bytes12 = _rt::Vec::from_raw_parts(l10.cast(), len12, len12);
+                    let l13 = *ptr8
                         .add(2 * ::core::mem::size_of::<*const u8>())
                         .cast::<*mut u8>();
-                    let l12 = *ptr6
+                    let l14 = *ptr8
                         .add(3 * ::core::mem::size_of::<*const u8>())
                         .cast::<usize>();
-                    let len13 = l12;
-                    let bytes13 = _rt::Vec::from_raw_parts(l11.cast(), len13, len13);
-                    let l14 = *ptr6
+                    let len15 = l14;
+                    let bytes15 = _rt::Vec::from_raw_parts(l13.cast(), len15, len15);
+                    let l16 = *ptr8
                         .add(4 * ::core::mem::size_of::<*const u8>())
                         .cast::<*mut u8>();
-                    let l15 = *ptr6
+                    let l17 = *ptr8
                         .add(5 * ::core::mem::size_of::<*const u8>())
                         .cast::<usize>();
-                    let len16 = l15;
-                    let bytes16 = _rt::Vec::from_raw_parts(l14.cast(), len16, len16);
-                    let result17 = CreateInvoiceResponse {
-                        payment_hash: _rt::string_lift(bytes10),
-                        payment_request: _rt::string_lift(bytes13),
-                        checking_id: _rt::string_lift(bytes16),
+                    let len18 = l17;
+                    let bytes18 = _rt::Vec::from_raw_parts(l16.cast(), len18, len18);
+                    let result19 = CreateInvoiceResponse {
+                        payment_hash: _rt::string_lift(bytes12),
+                        payment_request: _rt::string_lift(bytes15),
+                        checking_id: _rt::string_lift(bytes18),
                     };
-                    result17
+                    if layout7.size() != 0 {
+                        _rt::alloc::dealloc(result7.cast(), layout7);
+                    }
+                    result19
                 }
             }
             #[allow(unused_unsafe, clippy::all)]
@@ -1547,6 +1857,7 @@ mod _rt {
             self as i64
         }
     }
+    pub use alloc_crate::alloc;
     pub unsafe fn cabi_dealloc(ptr: *mut u8, size: usize, align: usize) {
         if size == 0 {
             return;
@@ -1559,7 +1870,6 @@ mod _rt {
         wit_bindgen_rt::run_ctors_once();
     }
     extern crate alloc as alloc_crate;
-    pub use alloc_crate::alloc;
 }
 /// Generates `#[unsafe(no_mangle)]` functions to export the specified type as
 /// the root implementation of all generated traits.
@@ -1596,40 +1906,45 @@ pub(crate) use __export_zapgoals_impl as export;
 )]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1555] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x94\x0b\x01A\x02\x01\
-A\x10\x01B:\x01r\x02\x05tables\x02ids\x04\0\x13storage-get-request\x03\0\0\x01ks\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1867] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xcc\x0d\x01A\x02\x01\
+A\x0f\x01BF\x01r\x02\x05tables\x02ids\x04\0\x13storage-get-request\x03\0\0\x01ks\
 \x01r\x01\x09data-json\x02\x04\0\x14storage-get-response\x03\0\x03\x01r\x02\x05t\
-ables\x02ids\x04\0\x1astorage-get-public-request\x03\0\x05\x01r\x02\x05tables\x09\
-data-json\x02\x04\0\x13storage-set-request\x03\0\x07\x01r\x01\x02ok\x7f\x04\0\x14\
-storage-set-response\x03\0\x09\x01r\x02\x05tables\x02ids\x04\0\x16storage-delete\
--request\x03\0\x0b\x01r\x01\x02ok\x7f\x04\0\x17storage-delete-response\x03\0\x0d\
-\x01r\x08\x05tables\x0cfilters-json\x02\x06search\x02\x12search-fields-json\x02\x07\
-sort-by\x02\x0adescending\x7f\x05limity\x06offsety\x04\0\x19storage-paginated-re\
-quest\x03\0\x0f\x01r\x02\x09rows-jsons\x05totaly\x04\0\x1astorage-paginated-resp\
-onse\x03\0\x11\x01r\x05\x09source-ids\x06amountw\x08currencys\x04memos\x0aextra-\
-json\x02\x04\0\x1dcreate-invoice-public-request\x03\0\x13\x01r\x03\x0cpayment-ha\
-shs\x0fpayment-requests\x0bchecking-ids\x04\0\x17create-invoice-response\x03\0\x15\
-\x01r\x03\x02ids\x04names\x08currency\x02\x04\0\x0ewallet-summary\x03\0\x17\x01p\
-\x18\x01r\x01\x07wallets\x19\x04\0\x15list-wallets-response\x03\0\x1a\x01r\x01\x09\
-timestampw\x04\0\x0cnow-response\x03\0\x1c\x01r\x01\x06prefixs\x04\0\x11random-i\
-d-request\x03\0\x1e\x01r\x01\x02ids\x04\0\x12random-id-response\x03\0\x20\x01r\x02\
-\x05levels\x07messages\x04\0\x0blog-request\x03\0\"\x01r\x01\x02ok\x7f\x04\0\x0c\
-log-response\x03\0$\x01@\x01\x03req\x01\0\x04\x04\0\x0bstorage-get\x01&\x01@\x01\
-\x03req\x06\0\x04\x04\0\x12storage-get-public\x01'\x01@\x01\x03req\x08\0\x0a\x04\
-\0\x0bstorage-set\x01(\x01@\x01\x03req\x0c\0\x0e\x04\0\x0estorage-delete\x01)\x01\
-@\x01\x03req\x10\0\x12\x04\0\x15storage-get-paginated\x01*\x01@\x01\x03req\x14\0\
-\x16\x04\0\x15create-invoice-public\x01+\x01@\0\0\x1b\x04\0\x11list-user-wallets\
-\x01,\x01@\0\0\x1d\x04\0\x03now\x01-\x01@\x01\x03req\x1f\0!\x04\0\x09random-id\x01\
-.\x01@\x01\x03req#\0%\x04\0\x03log\x01/\x03\0\x15lnbits:extension/host\x05\0\x01\
-@\x01\x07payloads\0s\x04\0\x0bcreate-goal\x01\x01\x04\0\x0alist-goals\x01\x01\x04\
-\0\x0bget-wallets\x01\x01\x04\0\x0bupdate-goal\x01\x01\x04\0\x0bdelete-goal\x01\x01\
-\x04\0\x0fget-public-goal\x01\x01\x04\0\x0ecreate-invoice\x01\x01\x04\0\x0clnurl\
--params\x01\x01\x04\0\x0elnurl-callback\x01\x01\x04\0\x0fon-invoice-paid\x01\x01\
-\x04\0\x0asweep-goal\x01\x01\x04\0\x0clist-periods\x01\x01\x04\0\x09sweep-due\x01\
-\x01\x04\0\x19lnbits:extension/zapgoals\x04\0\x0b\x0e\x01\0\x08zapgoals\x03\0\0\0\
-G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.227.1\x10wit-bindge\
-n-rust\x060.41.0";
+ables\x02ids\x04\0\x1astorage-get-public-request\x03\0\x05\x01r\x03\x05tables\x09\
+source-ids\x09data-json\x02\x04\0\x1dstorage-append-public-request\x03\0\x07\x01\
+r\x01\x02ids\x04\0\x1estorage-append-public-response\x03\0\x09\x01r\x02\x05table\
+s\x09data-json\x02\x04\0\x13storage-set-request\x03\0\x0b\x01r\x01\x02ok\x7f\x04\
+\0\x14storage-set-response\x03\0\x0d\x01r\x02\x05tables\x02ids\x04\0\x16storage-\
+delete-request\x03\0\x0f\x01r\x01\x02ok\x7f\x04\0\x17storage-delete-response\x03\
+\0\x11\x01r\x08\x05tables\x0cfilters-json\x02\x06search\x02\x12search-fields-jso\
+n\x02\x07sort-by\x02\x0adescending\x7f\x05limity\x06offsety\x04\0\x19storage-pag\
+inated-request\x03\0\x13\x01r\x02\x09rows-jsons\x05totaly\x04\0\x1astorage-pagin\
+ated-response\x03\0\x15\x01r\x09\x05tables\x09source-ids\x0cfilters-json\x02\x06\
+search\x02\x12search-fields-json\x02\x07sort-by\x02\x0adescending\x7f\x05limity\x06\
+offsety\x04\0\x20storage-public-paginated-request\x03\0\x17\x01o\x02ss\x01p\x19\x01\
+r\x05\x09source-ids\x06amountw\x08currencys\x04memos\x05extra\x1a\x04\0\x1dcreat\
+e-invoice-public-request\x03\0\x1b\x01r\x03\x0cpayment-hashs\x0fpayment-requests\
+\x0bchecking-ids\x04\0\x17create-invoice-response\x03\0\x1d\x01r\x03\x02ids\x04n\
+ames\x08currency\x02\x04\0\x0ewallet-summary\x03\0\x1f\x01p\x20\x01r\x01\x07wall\
+ets!\x04\0\x15list-wallets-response\x03\0\"\x01r\x01\x09timestampw\x04\0\x0cnow-\
+response\x03\0$\x01r\x01\x06prefixs\x04\0\x11random-id-request\x03\0&\x01r\x01\x02\
+ids\x04\0\x12random-id-response\x03\0(\x01r\x02\x05levels\x07messages\x04\0\x0bl\
+og-request\x03\0*\x01r\x01\x02ok\x7f\x04\0\x0clog-response\x03\0,\x01@\x01\x03re\
+q\x01\0\x04\x04\0\x0bstorage-get\x01.\x01@\x01\x03req\x06\0\x04\x04\0\x12storage\
+-get-public\x01/\x01@\x01\x03req\x08\0\x0a\x04\0\x15storage-append-public\x010\x01\
+@\x01\x03req\x0c\0\x0e\x04\0\x0bstorage-set\x011\x01@\x01\x03req\x10\0\x12\x04\0\
+\x0estorage-delete\x012\x01@\x01\x03req\x14\0\x16\x04\0\x15storage-get-paginated\
+\x013\x01@\x01\x03req\x18\0\x16\x04\0\x1cstorage-get-public-paginated\x014\x01@\x01\
+\x03req\x1c\0\x1e\x04\0\x15create-invoice-public\x015\x01@\0\0#\x04\0\x11list-us\
+er-wallets\x016\x01@\0\0%\x04\0\x03now\x017\x01@\x01\x03req'\0)\x04\0\x09random-\
+id\x018\x01@\x01\x03req+\0-\x04\0\x03log\x019\x03\0\x15lnbits:extension/host\x05\
+\0\x01@\x01\x07payloads\0s\x04\0\x0bcreate-goal\x01\x01\x04\0\x0alist-goals\x01\x01\
+\x04\0\x0bget-wallets\x01\x01\x04\0\x0bupdate-goal\x01\x01\x04\0\x0bdelete-goal\x01\
+\x01\x04\0\x0fget-public-goal\x01\x01\x04\0\x0ecreate-invoice\x01\x01\x04\0\x0ei\
+nvoice-status\x01\x01\x04\0\x0fon-invoice-paid\x01\x01\x04\0\x0asweep-goal\x01\x01\
+\x04\0\x0clist-periods\x01\x01\x04\0\x09sweep-due\x01\x01\x04\0\x19lnbits:extens\
+ion/zapgoals\x04\0\x0b\x0e\x01\0\x08zapgoals\x03\0\0\0G\x09producers\x01\x0cproc\
+essed-by\x02\x0dwit-component\x070.227.1\x10wit-bindgen-rust\x060.41.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

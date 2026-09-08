@@ -2,15 +2,12 @@
   "private": true,
   "scripts": {
     "build:templates": "node build-templates.js",
-    "build:bitcoin-connect": "esbuild frontend/bitcoin-connect.js --bundle --format=esm --platform=browser --target=es2020 --external:crypto --minify --outfile=static/js/bitcoin-connect.js",
-    "build": "npm run build:templates && npm run build:bitcoin-connect"
+    "build": "npm run build:templates",
+    "test:state": "node --test tests/payment-state.test.cjs"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
-    "@vue/compiler-dom": "3.5.21",
-    "esbuild": "0.25.9"
+    "@vue/compiler-dom": "3.5.21"
   },
-  "dependencies": {
-    "@getalby/bitcoin-connect": "3.12.3"
-  }
+  "version": "0.4.0"
 }

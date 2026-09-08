@@ -5,6 +5,9 @@ interface host {
   storage-get: func(req: storage-get-request) -> storage-get-response;
   record storage-get-public-request { table: string, id: string }
   storage-get-public: func(req: storage-get-public-request) -> storage-get-response;
+  record storage-append-public-request { table: string, source-id: string, data-json: option<string> }
+  record storage-append-public-response { id: string }
+  storage-append-public: func(req: storage-append-public-request) -> storage-append-public-response;
   record storage-set-request { table: string, data-json: option<string> }
   record storage-set-response { ok: bool }
   storage-set: func(req: storage-set-request) -> storage-set-response;
@@ -14,7 +17,9 @@ interface host {
   record storage-paginated-request { table: string, filters-json: option<string>, search: option<string>, search-fields-json: option<string>, sort-by: option<string>, descending: bool, limit: u32, offset: u32 }
   record storage-paginated-response { rows-json: string, total: u32 }
   storage-get-paginated: func(req: storage-paginated-request) -> storage-paginated-response;
-  record create-invoice-public-request { source-id: string, amount: u64, currency: string, memo: string, extra-json: option<string> }
+  record storage-public-paginated-request { table: string, source-id: string, filters-json: option<string>, search: option<string>, search-fields-json: option<string>, sort-by: option<string>, descending: bool, limit: u32, offset: u32 }
+  storage-get-public-paginated: func(req: storage-public-paginated-request) -> storage-paginated-response;
+  record create-invoice-public-request { source-id: string, amount: u64, currency: string, memo: string, extra: list<tuple<string, string>> }
   record create-invoice-response { payment-hash: string, payment-request: string, checking-id: string }
   create-invoice-public: func(req: create-invoice-public-request) -> create-invoice-response;
   record wallet-summary { id: string, name: string, currency: option<string> }
@@ -29,4 +34,4 @@ interface host {
   record log-response { ok: bool }
   log: func(req: log-request) -> log-response;
 }
-world zapgoals { import host; export create-goal: func(payload: string) -> string; export list-goals: func(payload: string) -> string; export get-wallets: func(payload: string) -> string; export update-goal: func(payload: string) -> string; export delete-goal: func(payload: string) -> string; export get-public-goal: func(payload: string) -> string; export create-invoice: func(payload: string) -> string; export lnurl-params: func(payload: string) -> string; export lnurl-callback: func(payload: string) -> string; export on-invoice-paid: func(payload: string) -> string; export sweep-goal: func(payload: string) -> string; export list-periods: func(payload: string) -> string; export sweep-due: func(payload: string) -> string; }
+world zapgoals { import host; export create-goal: func(payload: string) -> string; export list-goals: func(payload: string) -> string; export get-wallets: func(payload: string) -> string; export update-goal: func(payload: string) -> string; export delete-goal: func(payload: string) -> string; export get-public-goal: func(payload: string) -> string; export create-invoice: func(payload: string) -> string; export invoice-status: func(payload: string) -> string; export on-invoice-paid: func(payload: string) -> string; export sweep-goal: func(payload: string) -> string; export list-periods: func(payload: string) -> string; export sweep-due: func(payload: string) -> string; }

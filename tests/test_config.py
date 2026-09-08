@@ -21,7 +21,7 @@ def test_public_invoice_permission_is_restricted_to_goal_wallet_field():
 
 def test_payment_event_storage_supports_idempotent_accounting():
     schema = json.loads((ROOT / 'storage/schema.json').read_text())
-    assert {'id', 'goalId', 'amount', 'newTotal', 'processedAt'} == {
+    assert {'id', 'goalId', 'amount', 'newTotal', 'processedAt', 'verified', 'issuedAt'} == {
         field['name'] for field in schema['tables']['payment_events']['fields']
     }
 

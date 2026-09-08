@@ -2,12 +2,12 @@
   "id": "zapgoalswasm",
   "name": "Zap Goals!",
   "short_description": "Create customizable Lightning funding goals with live progress",
-  "description": "Build branded public fundraising pages with live progress, suggested zap amounts, Bitcoin Connect, BOLT11 invoices, and direct LNURL-pay support in a sandboxed WASM extension.",
-  "description_md": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.3.1/description.md",
+  "description": "Invoice-only public Lightning funding goals with local QR codes, verified contribution accounting, fixed calendar periods, and a JavaScript widget.",
+  "description_md": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/description.md",
   "repo": "https://github.com/bitkarrot/zapgoalswasm",
-  "version": "0.3.1",
-  "min_lnbits_version": "1.6.0rc3",
-  "tile": "/ext-assets/zapgoalswasm/assets/icon.svg",
+  "version": "0.4.0",
+  "min_lnbits_version": "1.6.0",
+  "tile": "/ext-assets/zapgoalswasm/assets/icon.png",
   "tags": [
     "Crowdfunding",
     "Lightning",
@@ -22,22 +22,28 @@
   ],
   "images": [
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.3.1/screenshots/public-goal.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-public-goal.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.3.1/screenshots/choose-zap.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-choose-zap.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.3.1/screenshots/bitcoin-connect.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-bolt11.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.3.1/screenshots/edit-goal.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-edit-goal.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.3.1/screenshots/design-preview.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-design-preview.png"
     },
     {
-      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.3.1/screenshots/bolt11-invoice.png"
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-fixed-rules.png"
+    },
+    {
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-history.png"
+    },
+    {
+      "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.4.0/screenshots/invoice-only-mobile-invoice.png"
     }
   ],
   "extension_type": "wasm",
@@ -76,14 +82,6 @@
         "visibility": "public"
       },
       {
-        "name": "lnurl-params",
-        "visibility": "public"
-      },
-      {
-        "name": "lnurl-callback",
-        "visibility": "public"
-      },
-      {
         "name": "on-invoice-paid",
         "visibility": "event"
       },
@@ -98,6 +96,10 @@
       {
         "name": "sweep-due",
         "visibility": "authenticated"
+      },
+      {
+        "name": "invoice-status",
+        "visibility": "public"
       }
     ]
   },
@@ -110,11 +112,6 @@
     {
       "path": "/zapgoalswasm/public/{goalId}",
       "entrypoint": "templates/public.html",
-      "auth": "public"
-    },
-    {
-      "path": "/zapgoalswasm/public/{goalId}/embed",
-      "entrypoint": "templates/embed.html",
       "auth": "public"
     }
   ],
@@ -178,26 +175,6 @@
       }
     },
     {
-      "method": "GET",
-      "path": "/lnurl/{goalId}",
-      "export": "lnurl-params",
-      "auth": "public",
-      "ownerContext": {
-        "table": "goals",
-        "idParam": "goalId"
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/lnurl/callback/{goalId}",
-      "export": "lnurl-callback",
-      "auth": "public",
-      "ownerContext": {
-        "table": "goals",
-        "idParam": "goalId"
-      }
-    },
-    {
       "method": "POST",
       "path": "/goals/{goalId}/sweep",
       "export": "sweep-goal",
@@ -222,6 +199,16 @@
       "path": "/recurring/sweep-due",
       "export": "sweep-due",
       "auth": "user"
+    },
+    {
+      "method": "GET",
+      "path": "/goals/{goalId}/payments/{paymentHash}",
+      "export": "invoice-status",
+      "auth": "public",
+      "ownerContext": {
+        "table": "goals",
+        "idParam": "goalId"
+      }
     }
   ],
   "events": {
@@ -260,9 +247,26 @@
             "recurrenceUnit",
             "recurrenceInterval",
             "periodIndex",
-            "periodEndDate"
+            "periodEndDate",
+            "archived",
+            "accountingVersion",
+            "periodStartDate",
+            "recurrenceDayOfMonth",
+            "rolloverMode",
+            "sweepMode"
           ],
           "source_id_field": "id"
+        },
+        {
+          "table_name": "payment_events",
+          "public_fields": [
+            "id",
+            "goalId",
+            "verified",
+            "amount",
+            "issuedAt"
+          ],
+          "source_id_field": "goalId"
         }
       ]
     },
@@ -281,6 +285,22 @@
         {
           "table": "goals",
           "wallet_field": "walletId"
+        }
+      ]
+    },
+    {
+      "id": "ext.storage.append_public",
+      "description": "Record private goal-bound invoice issuances before creating contribution invoices",
+      "policies": [
+        {
+          "table": "invoice_issuances",
+          "source_table": "goals",
+          "source_id_field": "goalId",
+          "allowed_fields": [
+            "amount",
+            "createdAt"
+          ],
+          "max_rows_per_source": 10000
         }
       ]
     }

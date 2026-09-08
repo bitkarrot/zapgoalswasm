@@ -1,0 +1,14 @@
+[package]
+name = "zapgoals-accounting-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+serde_json = { version = "=1.0.151", default-features = false, features = ["alloc"] }
+time = { version = "=0.3.47", features = ["parsing", "formatting"] }
+
+[workspace]

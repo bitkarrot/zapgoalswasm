@@ -1,0 +1,54 @@
+{
+  "operations": [
+    {
+      "op": "create_table",
+      "table": "invoice_issuances",
+      "fields": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "goalId",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "integer"
+        },
+        {
+          "name": "createdAt",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "op": "add_field",
+      "table": "payment_events",
+      "field": "verified",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "op": "add_field",
+      "table": "goals",
+      "field": "archived",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "op": "add_field",
+      "table": "goals",
+      "field": "accountingVersion",
+      "type": "integer",
+      "default": 0
+    },
+    {
+      "op": "add_field",
+      "table": "payment_events",
+      "field": "issuedAt",
+      "type": "string",
+      "default": ""
+    }
+  ]
+}

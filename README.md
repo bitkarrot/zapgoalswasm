@@ -1,200 +1,128 @@
 # ZapGoals WASM
 
-<img width="160" height="160" alt="ZapGoals WASM" align="right" src="https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/main/static/assets/icon.png" /><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-<desc id="desc">A lightning bolt crossing a circular fundraising progress meter on a pink background</desc>
-<defs>
-<linearGradient id="background" x1="0%" y1="0%" x2="100%" y2="100%">
-<stop offset="0" stop-color="#f472b6"/>
-<stop offset="1" stop-color="#db2777"/>
-</linearGradient>
-<linearGradient id="bolt" x1="0%" y1="0%" x2="0%" y2="100%">
-<stop offset="0" stop-color="#fde047"/>
-<stop offset="1" stop-color="#f59e0b"/>
-</linearGradient>
-</defs>
-<rect width="256" height="256" rx="48" fill="url(#background)"/>
-<circle cx="128" cy="128" r="78" fill="none" stroke="#ffffff" stroke-opacity=".22" stroke-width="18"/>
-<path d="M128 50a78 78 0 0 1 72.6 106.4" fill="none" stroke="#2dd4bf" stroke-width="18" stroke-linecap="round"/>
-<circle cx="128" cy="128" r="50" fill="#201b57" fill-opacity=".88"/>
-<path d="M142 62 89 139h35l-12 56 56-85h-36z" fill="url(#bolt)" stroke="#fff7c2" stroke-width="4" stroke-linejoin="round"/>
-<circle cx="201" cy="157" r="9" fill="#2dd4bf" stroke="#d5fffa" stroke-width="4"/>
-</svg>
+<img width="160" height="160" alt="ZapGoals WASM" align="right" src="static/assets/icon.png" />
 
-ZapGoals WASM is a port of the classic LNbits ZapGoals extension for the current LNbits WASM extension runtime. It creates customizable public Lightning funding goals with wallet-specific accounting, direct invoices, LNURL-pay endpoints, recurring periods, embeddable cards, and live progress.
+Invoice-only Lightning funding goals for the stock LNbits WASM sandbox. Create a public goal, choose its appearance and suggested amounts, and receive contributions through locally generated QR codes and BOLT11 invoices. There is no payment-mode selector, wallet connector, browser payer credential, or third-party QR service.
 
-## Features
+## Supported features
 
-- Create, edit, list, publish, and delete funding goals.
-- Choose a receiving wallet and set target amount/date.
-- Configure descriptions, suggested contribution amounts, colors, fonts, and payment mode.
-- Public goal page with suggested/custom amounts, QR-ready BOLT11 invoices, optional comments, and Bitcoin Connect mode.
-- Live payment subscription with a paid checkmark and immediate public progress refresh.
-- Direct LNURL-pay metadata/callback routes using millisatoshi protocol amounts.
-- Progress is based only on settled invoices tagged to that goal and payment hashes are processed idempotently.
-- Recurring goals with configurable periods, manual sweeps, rollover, and period history.
-- Embeddable goal card via iframe or direct JavaScript widget with Shadow DOM.
-- Responsive Quasar UI matching the classic extension in light and dark modes.
-- Least-privilege WASM storage and public-invoice permissions.
+- Public funding pages with targets, deadlines, descriptions, colors, fonts, and live progress.
+- One to four suggested whole-satoshi amounts, custom amounts, and optional comments.
+- QR/BOLT11 invoices payable with any external Lightning wallet.
+- Goal-bound invoice issuance records and receiving-wallet/amount verification before credit.
+- Durable, verified receipt checks; WebSocket notifications alone never prove payment.
+- Fixed-calendar recurring periods with derived allocation/rollover history.
+- A standalone JavaScript widget, including multiple independent widgets on one page.
+- Archive goals without deleting their receipts or breaking settlement of existing invoices.
 
-## Current WASM boundary
+**Not supported:** Bitcoin Connect, Nostr/NIP-57, Lightning Addresses, LNURL-pay, automatic wallet transfers, early/manual balance resets, or external iframe embedding. The stock host blocks external iframes and browser networking inside its WASM frame; this extension does not relax those protections. Invoice and receipt requests on the main page use the approved host bridge.
 
-The current LNbits WASM host contract does not expose a safe extension hook for owning `/.well-known/lnurlp` or NIP-57 event cryptography. Therefore the WASM extension does not include Nostr recipient or Lightning Address username fields. Supported payments use each goal's direct LNURL-pay URL.
+## Installation
 
-The WASM host does not support internal wallet transfers, so the actual movement of sats to a target wallet must be performed externally. However, **automated scheduling is supported** via the [Scheduler extension](https://github.com/bitkarrot/scheduler) — see [Automated sweeps](#automated-sweeps) below.
+Requires **LNbits 1.6.0 or newer** with its stock WASM APIs. Use the explicit versioned install ZIP from the release, together with its SHA-256 manifest entry. Do **not** install GitHub's automatic source ZIP: it contains Python build/test files that the WASM host correctly rejects.
 
-## Install
+The repository's `manifest.json` is an explicit release manifest, not GitHub repository discovery. Its published entry must refer to a published install asset and matching checksum. A locally built candidate manifest is not a published release.
 
-For a local checkout, add this repository's archive to a manifest served by LNbits, install `zapgoalswasm` from **Manage Extensions**, enable it for a user, and grant the requested storage/invoice permissions. The API is mounted at `/api/v1/ext/zapgoalswasm`; the authenticated page is `/ext/zapgoalswasm` and public pages are `/ext/zapgoalswasm/public/<goal-id>`.
+Enable the extension for the user and review its permissions:
 
-## Use
+- Read/write extension-owned storage and list the user's wallets.
+- Read a restricted public goal/receipt projection.
+- Create public incoming invoices only for the receiving wallet stored on the goal.
+- Append private, goal-scoped issuance records before invoice creation.
 
-1. Open ZapGoals and create a goal.
-2. Select its receiving wallet, set the target amount and target date, then choose a payment mode.
-3. Customize the goal colors, font family, and font weight.
-4. Optionally enable recurring periods and configure the recurrence unit, interval, target wallet, sweep mode, and rollover mode.
-5. Publish or copy the public goal URL. The page updates when tagged contribution invoices settle.
-6. Use the **Embed** button to copy an iframe or script snippet for embedding on an external website.
+There is **no outgoing-payment, generic network, or wallet-admin permission**. Upgrades adding the issuance permission require accepting that permission before invoice creation can work. Issuance records are not publicly readable. The host-enforced issuance limit is 10,000 attempts per goal; attempts that fail after recording issuance also consume a slot. Reaching the limit fails closed rather than creating an untracked invoice. There is no automatic deletion of security bindings.
 
-The `vanilla` payment mode presents standard Lightning invoices, while `all` also enables Bitcoin Connect and its supported wallet connectors. Creators can configure one to four suggested zap amounts; contributors can select one or enter a custom amount and optional comment. Regardless of mode, only payments created for that goal count toward its progress.
+## Create and share
 
-## Recurring goals
+1. Open ZapGoals, select a receiving wallet, and enter the title, satoshi target, and deadline.
+2. Configure suggested amounts and optional presentation settings.
+3. For a recurring goal, choose its fixed calendar rules before saving.
+4. Share the public URL or copy the JavaScript widget snippet.
 
-A recurring goal reuses the same goal ID, public URL, LNURL endpoint, and embed snippet across multiple funding periods. At each period end, settled sats are swept and the progress counter resets for the next period.
+All contributions use vanilla invoices. The invoice/QR stays available if live monitoring temporarily fails; the page continues checking the verified receipt endpoint. A displayed success requires a verified contribution receipt, not an aggregate balance increase or an untrusted socket broadcast. Progress is always loaded from authoritative accounting, not optimistically incremented by editable form values.
 
-### Setup
+## Fixed-calendar recurring goals
 
-1. Create a goal and enable the **Recurring goal** toggle.
-2. Choose a recurrence unit (daily, weekly, monthly, quarterly, semi-annual, or annual) and interval (e.g. every 1 month).
-3. For monthly recurrence, optionally set a day of month (clamped to the last day of short months).
-4. Select a **target wallet** — an LNbits wallet that will receive swept sats. The WASM host cannot perform internal transfers, so this field records the intended destination for external processing.
-5. Choose a **sweep mode**:
-   - **Target amount** — records `min(zapped, goal_amount)` as moved. Excess sats roll over.
-   - **Entire amount** — records everything zapped this period as moved. No rollover.
-6. Choose a **rollover mode**:
-   - **Count excess as progress** — the next period starts with the rollover as its initial `currentAmount`.
-   - **Reset to zero** — the counter drops to 0 each period (excess sats remain in the goal wallet).
+Recurring financial rules are immutable after creation: receiving wallet, recurrence mode, target amount, initial deadline/anchor, interval/day, and allocation/rollover settings. Create a new goal to change those rules. Titles, descriptions, colors, typography, and suggested contribution amounts remain editable. Ordinary goals may still edit their target amount and deadline, but cannot be converted into a recurring series.
 
-### Manual sweeps
+The first period begins at creation and ends at the configured first deadline. Subsequent boundaries follow that anchor in UTC: daily, weekly, monthly, quarterly, semi-annual, or annual. Month-end days clamp to the actual target month's length without permanently drifting to the 28th.
 
-Because the WASM host does not support scheduling or internal wallet transfers, sweeps are triggered manually:
+Periods advance by the calendar—no scheduler or “sweep” is needed. Early/manual resets are not available. Legacy sweep API paths are read-only compatibility summaries and do not move funds or change stored balances.
 
-- Click the **sweep** button (broom icon) on a recurring goal in the admin panel.
-- Alternatively, call `POST /api/v1/ext/zapgoalswasm/goals/{goalId}/sweep` with an authenticated session.
+### Receipt-derived accounting
 
-The sweep records the completed period in the ledger, advances the period index, computes the next period end date, and resets or rolls over the progress counter according to the configured mode. The actual transfer of sats to the target wallet must be performed separately.
+Only settled, verified invoices contribute. Each receipt is assigned using the private issuance record's creation time. A late payment therefore updates the period in which its invoice was issued, and may update later carry. **Historical amounts are projections, not frozen transfer records.**
 
-### Automated sweeps
+For each closed period:
 
-While the WASM host itself does not run a scheduler, the [Scheduler extension](https://github.com/bitkarrot/scheduler) can call the sweep-due endpoint on a cron schedule. This allows all due recurring goals to be swept automatically without manual intervention.
+- Available amount = incoming carry + verified contributions issued in that period.
+- **Target amount** allocates up to the period target; **entire amount** allocates everything available.
+- With **counts as progress**, excess carries into the next period.
+- With **reset to zero**, excess is reported separately as retained rather than silently disappearing from accounting.
 
-1. Install and enable the Scheduler extension.
-2. Create a new scheduler job with:
-   - **URL**: `http://127.0.0.1:5000/api/v1/ext/zapgoalswasm/recurring/sweep-due`
-   - **Method**: `POST`
-   - **Headers**: `Authorization: Bearer <your-api-key>` (or `X-Api-Key: <your-admin-key>`)
-   - **Schedule**: e.g. `0 * * * *` (hourly) or `0 0 * * *` (daily at midnight)
-3. The endpoint sweeps all recurring goals whose `periodEndDate` has passed, records each completed period, and advances to the next period.
+“Allocated” and “retained” are accounting labels. **No funds are transferred.** Wallet balances and any actual transfer must be handled separately. Period history exposes the latest 100 projected closed periods; projection fails explicitly instead of truncating totals if its supported period/read budget is exceeded.
 
-The response returns a summary:
+Contribution receipts and opening balances are never overwritten by presentation edits or period advancement. Duplicate events are no-ops. Stable, checked receipt snapshots prevent paging races from displaying incomplete sums; a busy/changing read can return a retryable error instead of an incorrect total.
 
-```json
-{
-  "swept": [{"goalId": "zg_...", "periodId": "zg_...", "movedAmount": 0, "rolloverAmount": 0, "newPeriodIndex": 1}],
-  "errors": [],
-  "totalDue": 1,
-  "totalSwept": 1
-}
-```
+### Upgrading from 0.3.x
 
-The actual transfer of sats to each goal's target wallet must still be performed separately — the WASM host cannot initiate internal wallet transfers.
+Back up the extension database and stop the old runtime before the upgrade. Migration 005 is additive:
 
-### Period history
+- Existing `currentAmount` is preserved as the new series' opening balance; it is **not independently reconciled** by the migration.
+- Historical receipt hashes remain deduplication records, but are not counted again.
+- New, verified receipts are counted beyond the preserved opening balance.
+- Existing legacy period rows remain stored as legacy history, distinct from the new projection.
+- Old invoices without the new private issuance binding are quarantined rather than automatically credited. Reconcile any outstanding pre-upgrade invoice before accepting the cutover; the upgrade never claims those contributions vanished from the actual wallet.
 
-Each completed period is recorded in a ledger accessible via `GET /api/v1/ext/zapgoalswasm/goals/{goalId}/periods` (authenticated) and in the admin panel via the **history** button. Each row records the period index, start/end dates, total zapped, amount moved, rollover, and sweep timestamp.
+Do not attempt to “repair” old balances automatically by summing historical `newTotal` fields. The previous implementation could contain accounting inconsistencies, and an owner must reconcile those against actual wallet receipts if necessary. Archived goals retain receipt/issuance data and continue accepting settlement of already-issued invoices; no new invoices can be issued for them.
 
-## Embedding a goal on an external website
+## JavaScript widget
 
-Any ZapGoal can be embedded on an external website using one of two methods. The embed dialog (accessible via the **Embed** button in the admin panel) lets you choose between them and copy the snippet.
-
-### JS widget (recommended)
-
-A `<script>` tag that injects a Shadow DOM widget directly into your page. Bitcoin Connect works natively because the script runs in your page's first-party context — `localStorage` and popups are not restricted.
+Copy the per-goal snippet from the admin page:
 
 ```html
 <script
   src="https://your-lnbits.example.com/ext-assets/zapgoalswasm/js/embed.js"
-  data-goal="{goal_id}"
+  data-goal="YOUR_GOAL_ID"
   async
 ></script>
 ```
 
-The script auto-detects the LNbits server URL from its own `src` attribute. It creates a container element, attaches a Shadow DOM (for CSS isolation from your page), and renders the full goal card with all features: live progress, countdown, recurring badge, zap button, invoice QR, and Bitcoin Connect.
+Each executing script reads its own configuration, so multiple goals and LNbits origins can coexist. The widget loads its QR implementation from the same LNbits origin and generates the QR locally. No invoice is sent to a third-party image service or CDN.
 
-### Iframe (simple)
+The widget runs in the embedding page's first-party JavaScript context. Use it only on sites you control; the site's script, style, connection, and CORS policies must allow the LNbits resources it uses. It does not receive wallet-admin keys. Shadow DOM isolates widget styling from ordinary page styles, but is not a security sandbox. External iframe snippets are intentionally not offered because stock LNbits prohibits that embedding route.
 
-Renders the goal in an iframe. Simpler but Bitcoin Connect may not work due to browser security restrictions on `localStorage` in cross-origin iframes (Safari blocks this by default). Falls back to QR-only with an "Open full page" link when Bitcoin Connect fails.
+## API
 
-```html
-<iframe
-  src="https://your-lnbits.example.com/ext/zapgoalswasm/public/{goal_id}/embed"
-  style="width:100%;max-width:500px;height:600px;border:0;border-radius:1rem;"
-  loading="lazy"
-  title="ZapGoal"
-></iframe>
-```
+Base: `/api/v1/ext/zapgoalswasm`.
 
-### What the embed shows
+- `GET /goals`, `POST /goals`, `PUT /goals/{goalId}` — owned goals.
+- `DELETE /goals/{goalId}` — archive, retaining accounting records.
+- `GET /wallets` — user's receiving-wallet choices.
+- `GET /goals/{goalId}/public` — public presentation and derived progress.
+- `POST /goals/{goalId}/invoice` — `{"amount":21,"comment":"Optional"}`; returns `paymentHash` and `paymentRequest`.
+- `GET /goals/{goalId}/payments/{paymentHash}` — `{"paid":true}` only for a durable verified receipt belonging to that goal; otherwise false.
+- `GET /goals/{goalId}/periods` — owned, derived period history.
+- Existing `/goals/{goalId}/sweep` and `/recurring/sweep-due` compatibility endpoints do not mutate accounting or transfer funds.
 
-Both methods display the same content as the public page: goal title, descriptions, progress bar with live updates, current/goal amounts, countdown timer, recurring period badge (if applicable), zap button with suggested amounts, custom amount input, BOLT11 invoice QR code, and Bitcoin Connect (if enabled on the goal).
+On recurring updates, omit locked financial fields, especially the displayed `targetDate`: that value is the current derived deadline, not the immutable first-period anchor. Amounts are integer sats between 1 and 2,100,000,000; dates are validated and normalized to UTC.
 
-### Technical notes
+## Development and verification
 
-- Both methods use the public API (`GET /goals/{id}/public`, `POST /goals/{id}/invoice`) and WebSockets (`/api/v1/ws/{goal_id}`) for live updates — no authentication required.
-- CORS is permissive on LNbits by default, so cross-origin embedding works without additional configuration.
-- The JS widget uses Shadow DOM for complete CSS isolation — your page's styles won't affect the widget and vice versa.
-- The iframe auto-resizes to fit the card content via `postMessage`.
-- The JS widget is served at `/ext-assets/zapgoalswasm/js/embed.js` and the iframe page at `/ext/zapgoalswasm/public/{goal_id}/embed`.
-- The JS widget imports Bitcoin Connect from `esm.sh` at runtime; the iframe uses the bundled `bitcoin-connect.js` static asset.
-- On successful payment via Bitcoin Connect, the widget calls `setPaid({preimage: ''})` on the payment controller to close the modal. If Bitcoin Connect fails to initialize, both methods fall back to the QR invoice dialog.
-
-### Security considerations
-
-- The JS widget executes in your page's first-party JavaScript context. Only use it on sites you control.
-- The iframe provides stronger isolation but may limit Bitcoin Connect's `localStorage` and popup access.
-- Neither method exposes private wallet credentials, admin keys, or authenticated API keys. Only public goal and invoice creation endpoints are used.
-
-## Public API
-
-Routes are mounted below the extension's `/api/v1/ext/zapgoalswasm` prefix:
-
-- `GET /goals/{goalId}/public` returns public presentation settings, `goalAmount`, `currentAmount`, `targetDate`, status, percentage, and payment identifiers.
-- `POST /goals/{goalId}/invoice` with `{"amount": 21, "comment": "Great goal"}` creates a goal-tagged BOLT11 invoice.
-- `GET /lnurl/{goalId}` and `GET /lnurl/callback/{goalId}` implement LNURL-pay callbacks.
-- `POST /goals/{goalId}/sweep` manually triggers a period-end sweep for a recurring goal (authenticated).
-- `GET /goals/{goalId}/periods` returns the per-period ledger for a recurring goal (authenticated).
-- `/api/v1/ws/{goal_id}` is the LNbits core WebSocket used as a realtime invalidation signal; clients should re-fetch the public endpoint after a message.
-
-Goal and direct invoice amounts use satoshis; LNURL callback amounts use millisatoshis; target dates are normalized to UTC.
-
-## Development
-
-Install Node.js, Rust, `cargo-component`, and the WASM target, then run:
+Build tools are pinned and checked in `build-tools.json` (Rust 1.98.0, cargo-component 0.21.1, Node 22.22.3). Install those versions and the `wasm32-wasip1` target before building. The build never silently installs or upgrades a toolchain. Existing Python config/package checks require pytest in the selected development Python environment.
 
 ```sh
-npm install
+npm ci --ignore-scripts
 make check
-make build
+make test PYTHON=/path/to/python-with-pytest
+make test-browser
 make package
 ```
 
-The frontend build precompiles Vue templates for the strict iframe CSP and bundles the pinned Bitcoin Connect dependency into same-origin static assets.
+`make test` uses isolated native Rust mock-host/accounting tests and Node/Python tests. Browser tests use guarded fixtures with all invoice/payment writes intercepted before navigation and stock sandbox/CSP restored in browser responses. The only actual POST permitted is the host's in-memory frame-token handshake. The old live-payment e2e scripts have been removed; maintained browser tests do not make real payments.
 
-The local manifest entry is in `manifest.json`; a release archive must contain `config.json`, `wasm/module.wasm`, `wasm/wit/world.wit`, `storage/`, `templates/`, and `static/`.
-
-## Project
-
-Created by [bitkarrot](https://github.com/bitkarrot). Source code and releases are available in the [ZapGoals WASM GitHub repository](https://github.com/bitkarrot/zapgoalswasm).
+The frontend build precompiles Vue templates for stock CSP. The install packager sorts files, normalizes timestamps/permissions, includes license notices, and excludes source/build/test artifacts. Identical runtime files produce identical ZIP bytes. The release manifest is generated after packaging and is not included in the ZIP, avoiding a self-referential checksum.
 
 ## License
 
-ZapGoals WASM is original software licensed under the [MIT License](LICENSE).
+MIT; see `LICENSE`. The retained local QR generator includes its full MIT notice, with provenance in `static/js/qr.js` and `THIRD_PARTY_NOTICES.txt`. Bitcoin Connect and its bundled dependency tree are no longer distributed.

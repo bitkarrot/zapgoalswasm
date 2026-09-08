@@ -1,0 +1,15 @@
+[package]
+name = "zapgoals-backend-tests"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../../wasm/src/lib.rs"
+doctest = false
+
+# Same dependencies already used by the backend, not a WASM/runtime or network
+# dependency. `cargo test --lib` disables the real host bindings via cfg(test).
+[dependencies]
+serde_json = { version = "1", default-features = false, features = ["alloc"] }
+time = { version = "=0.3.47", features = ["parsing", "formatting"] }

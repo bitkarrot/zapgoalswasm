@@ -55,7 +55,7 @@ return function render(_ctx, _cache) {
                   color: "primary",
                   class: "q-mt-md",
                   label: "Retry",
-                  onClick: _ctx.loadGoal
+                  onClick: $event => (_ctx.loadGoal())
                 }, null, 8 /* PROPS */, ["onClick"])
               ]),
               _: 1 /* STABLE */
@@ -165,12 +165,19 @@ return function render(_ctx, _cache) {
                         color: "primary",
                         icon: "bolt",
                         label: _ctx.zapButtonLabel,
-                        disable: _ctx.isEnded,
+                        disable: _ctx.isEnded || _ctx.creatingInvoice || _ctx.paymentState==='pending',
                         onClick: _ctx.openAmountDialog
                       }, null, 8 /* PROPS */, ["label", "disable", "onClick"]),
-                      (_ctx.isComplete)
+                      (_ctx.goal.legacyOpeningUnverified)
                         ? (_openBlock(), _createElementBlock("div", {
                             key: 3,
+                            class: "text-caption q-mt-md",
+                            role: "note"
+                          }, "Includes an opening balance carried forward from an earlier version; it has not been independently reconciled."))
+                        : _createCommentVNode("v-if", true),
+                      (_ctx.isComplete && !_ctx.isEnded)
+                        ? (_openBlock(), _createElementBlock("div", {
+                            key: 4,
                             class: "paid-summary q-mt-lg",
                             "aria-live": "polite"
                           }, [
@@ -179,7 +186,7 @@ return function render(_ctx, _cache) {
                               color: "positive",
                               size: "2rem"
                             }),
-                            _createElementVNode("span", null, "Target reached — zaps remain open until the deadline.")
+                            _createElementVNode("span", null, _toDisplayString(_ctx.goal.recurring ? 'Period target reached — zaps remain open.' : 'Target reached — zaps remain open until the deadline.'), 1 /* TEXT */)
                           ]))
                         : _createCommentVNode("v-if", true)
                     ]),
@@ -192,7 +199,7 @@ return function render(_ctx, _cache) {
     ]),
     _createVNode(_component_q_dialog, {
       modelValue: _ctx.amountDialog,
-      "onUpdate:modelValue": $event => ((_ctx.amountDialog) = $event)
+      "onUpdate:modelValue": [$event => ((_ctx.amountDialog) = $event), _ctx.onAmountDialogChange]
     }, {
       default: _withCtx(() => [
         _createVNode(_component_q_card, { class: "amount-dialog q-pa-lg" }, {
@@ -254,10 +261,11 @@ return function render(_ctx, _cache) {
                 modelValue: _ctx.amount,
                 "onUpdate:modelValue": $event => ((_ctx.amount) = $event),
                 modelModifiers: { number: true },
+                disable: _ctx.creatingInvoice,
                 label: "Custom amount",
                 suffix: "sats",
                 rules: [_ctx.positiveAmount]
-              }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "rules"]),
+              }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "disable", "rules"]),
               _createVNode(_component_q_input, {
                 outlined: "",
                 type: "textarea",
@@ -266,8 +274,9 @@ return function render(_ctx, _cache) {
                 counter: "",
                 modelValue: _ctx.comment,
                 "onUpdate:modelValue": $event => ((_ctx.comment) = $event),
+                disable: _ctx.creatingInvoice,
                 label: "Comment (optional)"
-              }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
+              }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "disable"]),
               _createVNode(_component_q_btn, {
                 unelevated: "",
                 "no-caps": "",
@@ -276,9 +285,10 @@ return function render(_ctx, _cache) {
                 icon: "bolt",
                 type: "button",
                 loading: _ctx.creatingInvoice,
+                disable: _ctx.isEnded,
                 label: _ctx.paymentButtonLabel,
                 onClick: _ctx.createInvoice
-              }, null, 8 /* PROPS */, ["loading", "label", "onClick"]),
+              }, null, 8 /* PROPS */, ["loading", "disable", "label", "onClick"]),
               _createVNode(_component_q_btn, {
                 flat: "",
                 "no-caps": "",
@@ -296,9 +306,8 @@ return function render(_ctx, _cache) {
     }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]),
     _createVNode(_component_q_dialog, {
       modelValue: _ctx.invoiceDialog,
-      "onUpdate:modelValue": $event => ((_ctx.invoiceDialog) = $event),
-      position: "top",
-      onHide: _ctx.closeInvoice
+      "onUpdate:modelValue": [$event => ((_ctx.invoiceDialog) = $event), _ctx.onInvoiceDialogChange],
+      position: "top"
     }, {
       default: _withCtx(() => [
         _createVNode(_component_q_card, { class: "invoice-dialog q-pa-lg" }, {
@@ -315,7 +324,8 @@ return function render(_ctx, _cache) {
                     size: "5rem"
                   }),
                   _createElementVNode("div", { class: "text-h5 q-mt-md" }, "Payment received"),
-                  _createElementVNode("p", null, "Thank you for supporting this goal."),
+                  _createElementVNode("p", null, "Thank you for supporting this goal with " + _toDisplayString(_ctx.formatSats(_ctx.invoice?.amount)) + " sats.", 1 /* TEXT */),
+                  _createElementVNode("p", { class: "text-caption" }, "Goal progress updates from the receiving server."),
                   _createVNode(_component_q_btn, {
                     unelevated: "",
                     color: "positive",
@@ -325,8 +335,8 @@ return function render(_ctx, _cache) {
                 ]))
               : (_ctx.invoice)
                 ? (_openBlock(), _createElementBlock("div", { key: 1 }, [
-                    _createElementVNode("div", { class: "text-h6 text-center" }, "Pay Lightning invoice"),
-                    _createElementVNode("div", { class: "text-center text-grey-7 q-mb-md" }, "Scan the QR code or copy the BOLT11 invoice with any Lightning wallet."),
+                    _createElementVNode("div", { class: "text-h6 text-center" }, "Pay " + _toDisplayString(_ctx.formatSats(_ctx.invoice.amount)) + " sats", 1 /* TEXT */),
+                    _createElementVNode("div", { class: "text-center text-grey-7 q-mb-md" }, "Scan the QR code with a Lightning wallet, or copy and paste the BOLT11 invoice into your wallet."),
                     _createElementVNode("div", { class: "qr-box" }, [
                       _createVNode(_component_qrcode_vue, {
                         value: 'LIGHTNING:'+_ctx.invoice.paymentRequest.toUpperCase(),
@@ -353,22 +363,43 @@ return function render(_ctx, _cache) {
                       ]),
                       _: 1 /* STABLE */
                     }, 8 /* PROPS */, ["model-value"]),
-                    _createElementVNode("div", {
-                      class: "pending-row",
-                      "aria-live": "polite"
-                    }, [
-                      _createVNode(_component_q_spinner_dots, {
-                        color: "primary",
-                        size: "2rem"
-                      }),
-                      _createElementVNode("span", null, "Waiting for payment…")
-                    ]),
+                    (_ctx.monitoringError || _ctx.receiptError)
+                      ? (_openBlock(), _createElementBlock("div", {
+                          key: 0,
+                          class: "q-mt-md",
+                          role: "status"
+                        }, [
+                          (_ctx.monitoringError)
+                            ? (_openBlock(), _createElementBlock("p", { key: 0 }, _toDisplayString(_ctx.monitoringError), 1 /* TEXT */))
+                            : _createCommentVNode("v-if", true),
+                          (_ctx.receiptError)
+                            ? (_openBlock(), _createElementBlock("p", { key: 1 }, _toDisplayString(_ctx.receiptError), 1 /* TEXT */))
+                            : _createCommentVNode("v-if", true),
+                          _createVNode(_component_q_btn, {
+                            outline: "",
+                            color: "primary",
+                            label: "Retry payment monitoring",
+                            loading: _ctx.subscribing || Boolean(_ctx.receiptCheck),
+                            onClick: _ctx.retryPaymentMonitoring
+                          }, null, 8 /* PROPS */, ["loading", "onClick"])
+                        ]))
+                      : (_openBlock(), _createElementBlock("div", {
+                          key: 1,
+                          class: "pending-row",
+                          "aria-live": "polite"
+                        }, [
+                          _createVNode(_component_q_spinner_dots, {
+                            color: "primary",
+                            size: "2rem"
+                          }),
+                          _createElementVNode("span", null, "Waiting for verified payment…")
+                        ])),
                     _createElementVNode("div", { class: "row justify-end q-mt-md" }, [
                       _createVNode(_component_q_btn, {
                         flat: "",
                         color: "grey",
                         label: "Close",
-                        onClick: $event => (_ctx.invoiceDialog=false)
+                        onClick: _ctx.closeInvoice
                       }, null, 8 /* PROPS */, ["onClick"])
                     ])
                   ]))
@@ -378,7 +409,7 @@ return function render(_ctx, _cache) {
         })
       ]),
       _: 1 /* STABLE */
-    }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "onHide"])
+    }, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"])
   ]))
 }
 }
