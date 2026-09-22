@@ -22,6 +22,10 @@
   ],
   "images": [
     {
+      "uri": "https://img.youtube.com/vi/1mtUfjlQRzc/hqdefault.jpg",
+      "link": "https://www.youtube.com/embed/1mtUfjlQRzc"
+    },
+    {
       "uri": "https://raw.githubusercontent.com/bitkarrot/zapgoalswasm/v0.5.2/screenshots/public-goal.png"
     },
     {
