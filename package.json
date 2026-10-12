@@ -6,8 +6,8 @@
     "test:state": "node --test tests/payment-state.test.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.62.1",
-    "@vue/compiler-dom": "3.5.21"
+    "@playwright/test": "1.64.0",
+    "@vue/compiler-dom": "3.5.43"
   },
   "version": "0.5.2"
 }
