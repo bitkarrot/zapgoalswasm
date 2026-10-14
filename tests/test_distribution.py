@@ -66,10 +66,12 @@ def test_runtime_routes_and_permissions_match_supported_features():
         "rolloverMode",
         "sweepMode",
     } <= set(public["goals"]["public_fields"])
-    # The first gallery image is the classic-style public-goal shot; the rest
-    # are the recaptured invoice-only captures. Every image must resolve from
-    # this repository at its release-tag URL.
-    for index, image in enumerate(config["images"]):
+    # Linked entries are external embeds (the demo video) and are exempt. The
+    # first repository screenshot is the classic-style public-goal shot; the
+    # rest are the recaptured invoice-only captures. Every screenshot must
+    # resolve from this repository at its release-tag URL.
+    screenshots = [image for image in config["images"] if "link" not in image]
+    for index, image in enumerate(screenshots):
         filename = image["uri"].rsplit("/", 1)[-1]
         assert (ROOT / "screenshots" / filename).is_file()
         if index == 0:
